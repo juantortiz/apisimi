@@ -127,6 +127,8 @@ def escribirArchivos(lista, pathSalida):
     for registro in lista:
         if registro['estado_simi'] == "APROBADA":
             estado = "A"
+        elif registro['estado_simi'] == "CAUTELAR":
+            estado = "C"
         else:
             estado = "O"
         djai.writerow([
