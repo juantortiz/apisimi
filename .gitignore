@@ -1,0 +1,15 @@
+/local
+/local/**
+.idea/
+.bak/
+.ropeproject/
+.project
+.pydevproject
+.settings/
+.venv
+
+
+*.swp
+*.bak
+*.pyc
+*~
