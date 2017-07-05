@@ -16,3 +16,4 @@ pytz==2017.2
 six==1.10.0
 Werkzeug==0.12.1
 MySQL-python==1.2.5
+mysql-connector-python-rf==2.2.2
