@@ -5,6 +5,7 @@ import smtplib
 import mimetypes
 import mysql.connector
 import ConfigParser
+import openpyxl
 from email.mime.multipart import MIMEMultipart
 from email import encoders
 from email.message import Message
@@ -105,47 +106,45 @@ def create_mails(dia,estado):
     attach_files(msg)
     return msg
 
-
-
-
 def get_archivos(fechas,dirToSearch):
     archivos = []
     for fecha in fechas:
         fecha = fecha[:fecha.find('_')]
         for i in os.listdir(dirToSearch):
             if os.path.isfile(os.path.join(dirToSearch,i)) and fecha in i:
-                archivos.append((dirToSearch+'/'+i,dirToSearch+'/salidasUsuario/'+i))
+                if 'A1dest' not in i:
+                    archivos.append((dirToSearch+'/'+i,dirToSearch+'/salidasUsuario/'+i))
     return archivos
 
 def a_letra(estado):
-    if estado == 'APROBADO':
+    if estado == 'APROBADA':
         return 'A'
     elif estado == 'CAUTELAR':
         return 'C'
     else:
         return ''
 
-def parse_archivos(archivos,estado):
-    letraEstado = a_letra(estado)
+def escribir_archivos(archivos,estado):
     for archivo in archivos:
-        salida = parse_archivo(archivo,letraEstado)
+        escribir_archivo(archivo,estado)
 
-def write_row(archivo,row):
-    archivo = archivo[:archivo.find('csv')]
-    archivo = archivo + row[3] + '.csv'
-    fd = open(archivo, 'a+')
-    writer = csv.writer(fd, delimiter=',')
-    writer.writerow([row[0]])
-    fd.flush()
-    if archivo not in attachs:
-        attachs.append(archivo)
-
-def esta_realmente_aprobada(simi):
+def get_cuit(simi):
     cnx = mysql.connector.connect(user=dbuser,password=dbpass, database=db, host = dbhost)
     cursor = cnx.cursor(buffered=True)
-    query = ("select vil.id as estado_simi from ProcessInstanceLog as pil join VariableInstanceLog as vil on vil.processinstanceid = pil.processinstanceid and vil.variableId = 'estado_simi'"
+    query = ("select vil2.value from ProcessInstanceLog as pil join VariableInstanceLog as vil on vil.processinstanceid = pil.processinstanceid and vil.variableId = 'estado_simi' join VariableInstanceLog as vil1 on vil1.processinstanceid = pil.processinstanceid and vil1.variableId='djai_id_simi'  join VariableInstanceLog as vil2 on vil2.processinstanceid = pil.processinstanceid and vil2.variableId='djai_cuit_imp' where vil1.value = '"+simi+"' and vil.value='CAUTELAR';")
+    cursor.execute(query,simi)
+    leg = cursor.fetchone()
+    cursor.close()
+    cnx.close()
+    return leg
+
+def esta_realmente_aprobada(simi,estado):
+    cnx = mysql.connector.connect(user=dbuser,password=dbpass, database=db, host = dbhost)
+    cursor = cnx.cursor(buffered=True)
+    query = ("select DISTINCT pil.id FROM ProcessInstanceLog as pil join VariableInstanceLog as vil on vil.processinstanceid = pil.processinstanceid and vil.variableId = 'estado_simi'"
                     "join VariableInstanceLog as vil1 on vil1.processinstanceid = pil.processinstanceid and vil1.variableId='djai_id_simi'"
-                    "where vil1.value = '"+simi+"' and vil.value='APROBADA';")
+                    "where vil1.value = '"+simi+"' and vil.value='"+estado+"';")
+
     cursor.execute(query,simi)
     leg_no = cursor.fetchall()
     cursor.close()
@@ -155,25 +154,64 @@ def esta_realmente_aprobada(simi):
     else:
         return False
 
-def parse_archivo(archivo,estado):
-    reader = csv.reader(open(archivo[0]),delimiter=',')
+def get_archivo_salida(archivo,estado,key):
+    archivo = archivo[:-3]
+    raiz = archivo[archivo.rfind('/')+1:]
+    nombre = raiz + key +'.'+estado+ '.xlsx'
+    path = archivo+key+'.'+estado+'.xlsx'
+    return nombre,path
+
+def escribir_simis(simis,estado,archivo):
+    for key in simis.keys():
+        wb = openpyxl.Workbook()
+        ws = wb.get_sheet_by_name('Sheet')
+        ws.title = 'Hoja1'
+        archivoSalida,path = get_archivo_salida(archivo,estado,key)
+        aux = simis[key]
+        for idx,simi in enumerate(aux):
+            ws.cell(row=idx+1,column=1).value = simi['simi']
+            if simi.has_key('cuit'):
+                ws.cell(row=idx+1,column=2).value = simi['cuit']
+        attachs.append(path)
+        wb.save(path)
+
+def escribir_archivo(archivo,estado):
+    simis = get_simis_from_file(estado,archivo[0])
+    escribir_simis(simis,estado,archivo[1])
+
+def get_simis_from_file(estado,archivo):
+    letraEstado = a_letra(estado)
+    reader = csv.reader(open(archivo),delimiter=',')
+    simis = {}
     for row in reader:
-        if row[1] == estado:
-            if esta_realmente_aprobada(row[0]):
-                write_row(archivo[1],row)
+        cuit = None
+        if row[1] == letraEstado:
+            if esta_realmente_aprobada(row[0],estado):
+                aux = {'simi':row[0]}
+                if letraEstado == 'C':
+                    cuit = get_cuit(row[0])
+                    aux['cuit'] = cuit[0]
+                nombre = row[3]
+                if not simis.has_key(nombre):
+                    simis[nombre] = []
+                simis[nombre].append(aux)
+    return simis
 
 if __name__ == '__main__':
     if len(sys.argv) != 6 :
         print("Argumentos incorrectos")
+        sys.exit()
     else:
+        estado = sys.argv[4]
+        if estado != 'APROBADA' and estado != 'CAUTELAR':
+            print("Los posibles estados son APROBADA|CAUTELAR")
+            sys.exit()
         init_config(sys.argv[1],sys.argv[5])
         fechadesde = sys.argv[2]
         fechahasta = sys.argv[3]
-        estado = sys.argv[4]
         fechas = get_fechas(fechadesde,fechahasta)
         archivos = get_archivos(fechas,dirtosearch)
-        parse_archivos(archivos,estado)
-        msg = create_mails(fechas[-1],estado)
-        send_mails(msg)
+        escribir_archivos(archivos,estado)
+        send_mails(create_mails(fechas[-1],estado))
 
 
