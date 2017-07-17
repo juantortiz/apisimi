@@ -21,7 +21,7 @@ def init_config(configFile):
     dbusername = config.get('DB','dbusername')
     dbpassword = config.get('DB','dbpassword')
     database = config.get('DB','db')
-    dbhost = config.get('DB','host')
+    dbhost = config.get('DB','dbhost')
     username = config.get('JBPM','username')
     password = config.get('JBPM','password')
     base_url = config.get('JBPM','url')
@@ -37,22 +37,14 @@ def eliminar(simis):
             print('ERROR \t La simi ' + str(simi[0]) + ' No pudo ser abortada. Error: ' + str(r.status_code))
 
 
+
 def esta_instanciada(simi):
     cnx = mysql.connector.connect(user=dbusername,password=dbpassword,database=database, host=dbhost )
     cursor = cnx.cursor(buffered=True)
-    '''
-        query = ("select  pil.process "
-            "from ProcessInstanceLog as pil "
-            "join VariableInstanceLog as vil on vil.processinstanceid = pil.processinstanceid and vil.variableId = 'estado_simi' "
-            "join VariableInstanceLog as vil1 on vil1.processinstanceid = pil.processinstanceid and vil1.variableId='djai_id_simi'"
-            "where vil1.value = '"+simi+"' and vil.value='APROBADA';")
-    '''
-
-    query = ("select pil.processInstanceId, pil.externalId "
+    query = ("select pil.processInstanceId "
                 "FROM ProcessInstanceLog as pil "
                 "join VariableInstanceLog as vil on vil.processinstanceid = pil.processinstanceid and vil.variableId = 'djai_id_simi'"
                 "where vil.value='"+simi+"' and pil.status in (0,1);")
-
     cursor.execute(query)
     response = cursor.fetchall()
     cursor.close()
