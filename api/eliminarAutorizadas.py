@@ -6,7 +6,7 @@ import requests
 import ConfigParser
 from requests.auth import HTTPBasicAuth
 
-dbhost = dbusername = dbpassword = username = password = database = base_url =  ''
+instance = dbhost = dbusername = dbpassword = username = password = database = base_url =  ''
 counterOk = 0
 counter = 0
 counterTo = 0
@@ -21,6 +21,7 @@ def init_config(configFile):
     global password
     global database
     global base_url
+    global instance
     dbusername = config.get('DB','dbusername')
     dbpassword = config.get('DB','dbpassword')
     database = config.get('DB','db')
@@ -28,12 +29,14 @@ def init_config(configFile):
     username = config.get('JBPM','username')
     password = config.get('JBPM','password')
     base_url = config.get('JBPM','url')
+    base_url = base_url[:base_url.find(base_url.split('/')[6])]
+
 
 
 def eliminar(simis):
     print "Abortando simi"
     for simi in simis:
-        url = base_url+ 'process/instance/'+str(simi[0])+'/abort'
+        url = base_url + instance + '/process/instance/'+str(simi[0])+'/abort'
         r = requests.post(url,auth=HTTPBasicAuth(username, password))
         if r.status_code == 200:
             global counterOk
@@ -84,8 +87,9 @@ def main(filename):
     process_file(filename)
 
 if __name__ == '__main__':
-    init_config(sys.argv[1])
-    main(sys.argv[2])
+    instance = sys.argv[1]
+    init_config(sys.argv[2])
+    main(sys.argv[3])
     print("Hubo \t"+str(counter)+"\t Simis en la cabecera")
     print("Hubo \t"+str(counterTo)+"\t Simis para abortar")
     print("Hubo \t"+str(counterOk)+"\t Simis abortadas")
