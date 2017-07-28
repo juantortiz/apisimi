@@ -11,6 +11,7 @@ from datetime import datetime, timedelta
 
 instance = dbhost = dbusername = dbpassword = username = password = database = base_url =  ''
 counterOk = 0
+counterNOK = 0
 counter = 0
 counterTo = 0
 
@@ -44,8 +45,10 @@ def eliminar(simis):
         if r.status_code == 200:
             global counterOk
             counterOk = counterOk + 1
-            print('La simi con proceso' + str(simi) + ' Fue abortada exitosamente')
+            print('La simi con proceso ' + str(simi) + ' Fue abortada exitosamente')
         else:
+            global counterNOK
+            counterNOK = counterNOK + 1
             print >>sys.stderr, 'ERROR \t La simi con proceso ' + str(simi) + ' No pudo ser abortada. Error: ' + str(r.status_code)
 
 
@@ -98,11 +101,11 @@ def process_file(filename):
         print "Simi: \t"+row[0],
         simis = necesitan_abortar(row)
         if len(simis) > 0:
-            print "Necesita ser abortada",
+            print "\t Necesita ser abortada"
             counterTo = counterTo + 1
             eliminar(simis)
         else:
-            print "No necesita ser abortada",
+            print "\t No necesita ser abortada",
         print
 
 def simis_por_estado(row):
@@ -162,5 +165,6 @@ if __name__ == '__main__':
     main(sys.argv[3])
     print("Hubo \t"+str(counter)+"\t Simis en la cabecera")
     print("Hubo \t"+str(counterTo)+"\t Simis para abortar")
-    print("Hubo \t"+str(counterOk)+"\t Simis abortadas por actualizacion")
+    print("Hubo \t"+str(counterOk)+"\t Simis abortadas")
+    print("Hubo \t"+str(counterNOK)+"\t Simis no pudieron ser abortadas")
 
