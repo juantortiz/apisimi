@@ -105,7 +105,6 @@ class ListaSimis(Resource):
             rargs = parser2.parse_args()
             listaSimis = rargs['listaSimi']
 
-
             lista = listaSimis.split(',')
             cantTask = len(listaSimis.split(','))
             cont = 0
@@ -131,14 +130,18 @@ class ListaSimis(Resource):
             # print lista2
 
             for ind in range(len(lista2)):
+                if lista2[ind][ind] == '':
+                    continue
                 query_string1 = "SELECT tvi1.processinstanceid, tvi1.taskId, tvi1.value as actions_available "\
                                 "FROM  TaskVariableImpl as tvi1 where tvi1.name = 'actions_available' "\
                                 "and tvi1.taskId in (" + lista2[ind][ind] + ") " \
                                 "order by tvi1.processinstanceid;"
 
                 cursorJbpm.execute(query_string1)
+                print "QUERY 1 " ,query_string1
 
                 data1 = cursorJbpm.fetchall()
+                print "DATA1 ",data1
 
                 for index0 in range(len(data1)):
                     if index0 == 0:
@@ -148,10 +151,9 @@ class ListaSimis(Resource):
                         reg = ',' + str(data1[index0][0])
                         lp = lp + reg
 
-                print lp
 
                 query_string3 = " SELECT vil.processInstanceId, vil.variableId, vil.value from  VariableInstanceLog  vil " \
-                                "where vil.variableId in ('djai_estado', 'djai_id_simi', 'djai_cuit_imp', " \
+                                "where vil.variableId in ('djai_estado', 'djai_id_simi', 'grp', 'djai_cuit_imp', " \
                                 "'djai_raz_soc_imp', 'djai_fob_bi34', 'djai_fech_env_afip','estado_simi')" \
                                 "and vil.processinstanceid in (" + lp + ") "\
                                 "order by vil.processinstanceid, variableId;"
