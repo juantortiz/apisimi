@@ -2,11 +2,11 @@ import mysql.connector
 import sys
 import csv
 import requests
-import dateparser
 
 import ConfigParser
 from requests.auth import HTTPBasicAuth
 from datetime import datetime, timedelta
+from dateutil.parser import parse as date_parse
 
 
 instance = dbhost = dbusername = dbpassword = username = password = database = base_url =  ''
@@ -79,7 +79,7 @@ def getViejas(simis):
     fechaPasado = fechaHoy - timedelta(days = N)
     for simi in simis:
         if simi[1] != '':
-            fechaSimi = dateparser.parse(simi[1])
+            fechaSimi = date_parse(simi[1])
             if fechaSimi < fechaPasado:
                 viejas.append(int(simi[0]))
     return viejas
