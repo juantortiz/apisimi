@@ -84,8 +84,25 @@ class Importador(Resource):
         finally:
             conn.close()
 
-
 class ListaSimis(Resource):
+
+    def __init__(self):
+        self.grpMap = {}
+        analistas = ['Varios1','Varios2','Varios3','Varios4','Textil','Automotriz']
+        aprobadores = ['aprobador_Varios1','aprobador_Varios2','aprobador_Varios3','aprobador_Varios4','aprobador_Textil','aprobador_Automotriz']
+        for grp in analistas:
+            grupos = analistas[:]
+            grupos.pop(grupos.index(grp))
+            self.grpMap[grp] = grupos
+            self.grpMap[grp].append('aprobador_'+grp)
+        for grp in aprobadores:
+            grupos = aprobadores[:]
+            grupos.pop(grupos.index(grp))
+            self.grpMap[grp] = grupos
+            self.grpMap[grp].append('supervisor')
+        self.grpMap['supervisor'] = ['director_importacion']
+        self.grpMap['director_importacion'] = ['director_nacional']
+        self.grpMap['director_nacional'] = []
 
     def post(self):
         try:
@@ -127,8 +144,6 @@ class ListaSimis(Resource):
             o = {cont2: lMil}
             lista2.append(o)
 
-            # print lista2
-
             for ind in range(len(lista2)):
                 if lista2[ind][ind] == '':
                     continue
@@ -138,10 +153,8 @@ class ListaSimis(Resource):
                                 "order by tvi1.processinstanceid;"
 
                 cursorJbpm.execute(query_string1)
-                print "QUERY 1 " ,query_string1
 
                 data1 = cursorJbpm.fetchall()
-                print "DATA1 ",data1
 
                 for index0 in range(len(data1)):
                     if index0 == 0:
@@ -171,7 +184,13 @@ class ListaSimis(Resource):
                                'actions_available': data1[index1][2]}
                     for index3 in range(len(data3)):
                         if data1[index1][0] == data3[index3][0]:
-                            eleJson[data3[index3][1]] = data3[index3][2]
+                            #print "eleJson data3[index3][1]:", eleJson[data3[index3][1]]
+                            if data3[index3][1] == 'grp':
+                                groups = self.grpMap[data3[index3][2]]
+                                eleJson['escale_to'] = groups
+                                eleJson[data3[index3][1]] = data3[index3][2]
+                            else:
+                                eleJson[data3[index3][1]] = data3[index3][2]
                         else:
                             continue
 
@@ -194,7 +213,6 @@ class ListaSimis(Resource):
 
                     dataJson2.append(eleJson)
 
-            #print dataJson2
             return dataJson2
 
         except Exception as e:
