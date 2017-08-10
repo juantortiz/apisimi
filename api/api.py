@@ -1,4 +1,4 @@
-from flask import Flask
+from flask import Flask, jsonify, request
 from flask_restful import Resource, Api
 from flask_restful import reqparse
 from flaskext.mysql import MySQL
@@ -14,8 +14,8 @@ CORS(app)
 mysql = MySQL()
 mysql.init_app(app)
 
-class Importador(Resource):
 
+class Importador(Resource):
     def get(self):
 
         try:
@@ -88,7 +88,7 @@ class ListaSimis(Resource):
 
     def __init__(self):
         self.grpMap = {}
-        analistas = ['Varios1','Varios2','Varios3','Varios4','Textil','Automotriz']
+        analistas = ['Varios1','Varios2','Varios4','Textil','Automotriz']
         aprobadores = ['aprobador_Varios1','aprobador_Varios2','aprobador_Varios3','aprobador_Varios4','aprobador_Textil','aprobador_Automotriz']
         for grp in analistas:
             grupos = analistas[:]
@@ -105,25 +105,27 @@ class ListaSimis(Resource):
         self.grpMap['director_nacional'] = []
 
     def post(self):
+        # DB SIMI
+        parser2 = reqparse.RequestParser()
+        parser2.add_argument('listaSimi', type=unicode, required=True)
+        rargs = parser2.parse_args()
+        listaSimis = rargs['listaSimi']
+        lista = listaSimis.split(',')
+        simis = self.fetch_simis(lista)
+        return simis
+
+    def fetch_simis(self,lista):
+        dataJson2 = []
+        dbSimi = mysql.connect()
+        # DB JBPM
+        dbJbpm = MySQLdb.connect(host=host, user=user, passwd=passw, db=db)
+        # dbJbpm = MySQLdb.connect(host="localhost", user="jbpm", passwd="password", db="simidb")
+        cursorJbpm = dbJbpm.cursor()
+
         try:
-            dataJson2 = []
             lMil = ''
             lp = ''
-            # DB SIMI
-            dbSimi = mysql.connect()
-
-            # DB JBPM
-            dbJbpm = MySQLdb.connect(host=host, user=user, passwd=passw, db=db)
-            # dbJbpm = MySQLdb.connect(host="localhost", user="jbpm", passwd="password", db="simidb")
-            cursorJbpm = dbJbpm.cursor()
-
-            parser2 = reqparse.RequestParser()
-            parser2.add_argument('listaSimi', type=unicode, required=True)
-            rargs = parser2.parse_args()
-            listaSimis = rargs['listaSimi']
-
-            lista = listaSimis.split(',')
-            cantTask = len(listaSimis.split(','))
+            cantTask = len(lista)
             cont = 0
             cont2 = 0
             lista2 = []
@@ -221,10 +223,6 @@ class ListaSimis(Resource):
         finally:
             dbJbpm.close()
             dbSimi.close()
-
-
-#RECURSOS
-
 
 api.add_resource(Importador, '/Importador')
 api.add_resource(ListaSimis, '/ListaSimis')
