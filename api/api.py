@@ -40,6 +40,19 @@ def init_config(configFile):
 
 
 
+class Query(Resource):
+    def __init__(self):
+        self.args = {}
+
+    def get(self):
+        self.args = request.args
+        return self.getSimis()
+
+    def getSimis(self):
+        buscador = ListaSimis()
+        return buscador.fetch_simis(['9426','19427'])
+
+
 class Importador(Resource):
     def get(self):
 
@@ -148,7 +161,6 @@ class ListaSimis(Resource):
         dbSimi = mysql.connect()
         # DB JBPM
         dbJbpm = MySQLdb.connect(host=dbhost, user=dbuser, passwd=dbpass, db=db)
-        # dbJbpm = MySQLdb.connect(host="localhost", user="jbpm", passwd="password", db="simidb")
         cursorJbpm = dbJbpm.cursor()
 
         try:
@@ -305,6 +317,7 @@ class ListaSimis(Resource):
 
 api.add_resource(Importador, '/Importador')
 api.add_resource(ListaSimis, '/ListaSimis')
+api.add_resource(Query, '/Query')
 
 if len(sys.argv) == 2:
     # MySQL configurations

@@ -1,0 +1,54 @@
+stages:
+    - deploy
+
+deploy_to_test:
+    tags:
+        - test
+    environment:
+        name: test
+        url: http://186.33.211.247:89/web/index.html
+    stage: deploy
+    only:
+        - test
+    script:
+        - cd /var/www/html/simi/api
+        - git fetch --all
+        - git reset --hard origin/test
+        - source .venv/bin/activate
+        - .venv/bin/pip install -r requirements.txt
+
+deploy_to_dev:
+    tags:
+        - test
+    environment:
+        name: test
+        url: http://186.33.211.247:89/web2/index.html
+    stage: deploy
+    only:
+        - /^dev\/.*$/
+    script:
+        - cd /var/www/html/simi/api
+        - git fetch --all
+        - git reset --hard origin/$CI_COMMIT_REF_NAME
+        - source .venv/bin/activate
+        - .venv/bin/pip install -r requirements.txt
+
+deploy_to_prod:
+    tags:
+        - prod
+    environment:
+        name: prod
+        url: http://186.33.211.125:89/web/index.html
+    stage: deploy
+    only:
+        - master
+    when: manual
+    script: 
+        - cd /var/www/html/simi/api
+        - git fetch --all
+        - git reset --hard origin/$CI_COMMIT_REF_NAME
+        - source .venv/bin/activate
+        - .venv/bin/pip install -r requirements.txt
+
+
+
