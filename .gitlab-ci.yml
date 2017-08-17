@@ -11,13 +11,11 @@ deploy_to_test:
     only:
         - test
     script:
-        - pkill -f api/api.py
         - cd /var/www/html/simi/api
         - git fetch --all
         - git reset --hard origin/test
         - source .venv/bin/activate
         - .venv/bin/pip install -r requirements.txt
-        - python api/api.py simi Simi.T.7102 simidb 192.168.150.101 192.168.150.101 simi Simi.T.7102 jbpmdb &> /tmp/simi_$(date +%Y-%m-%d-%H_%M_%s)
 
 deploy_to_dev:
     tags:
@@ -34,7 +32,6 @@ deploy_to_dev:
         - git reset --hard origin/$CI_COMMIT_REF_NAME
         - source .venv/bin/activate
         - .venv/bin/pip install -r requirements.txt
-        - python api/api.py simi Simi.T.7102 simidb 192.168.150.101 192.168.150.101 simi Simi.T.7102 jbpmdb &> /tmp/simi_$(date +%Y-%m-%d-%H_%M_%s)
 
 deploy_to_prod:
     tags:
@@ -52,7 +49,6 @@ deploy_to_prod:
         - git reset --hard origin/$CI_COMMIT_REF_NAME
         - source .venv/bin/activate
         - .venv/bin/pip install -r requirements.txt
-        - python api/api.py simi Simi.PROD.7102 simidb 192.168.150.115 192.168.150.115 simi Simi.PROD.7102 jbpmdb &> /tmp/simi_$(date +%Y-%m-%d-%H_%M_%s)
 
 
 
