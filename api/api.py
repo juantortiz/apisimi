@@ -1,3 +1,5 @@
+import logging
+from logging.handlers import RotatingFileHandler
 from flask import Flask, jsonify, request
 from flask_restful import Resource, Api
 from flask_restful import reqparse
@@ -5,6 +7,8 @@ from flaskext.mysql import MySQL
 from flask_cors import CORS
 import sys
 import MySQLdb
+import re
+import ConfigParser
 import json
 
 
@@ -13,6 +17,27 @@ api = Api(app)
 CORS(app)
 mysql = MySQL()
 mysql.init_app(app)
+
+def init_config(configFile):
+    config = ConfigParser.ConfigParser()
+    config.read(configFile)
+    global dbuser
+    global dbpass
+    global db
+    global dbhost
+    global dirlog
+    global dirusrrol
+    app.config['MYSQL_DATABASE_USER'] = config.get('DBSIMI', 'dbusername')
+    app.config['MYSQL_DATABASE_PASSWORD'] = config.get('DBSIMI', 'dbpassword')
+    app.config['MYSQL_DATABASE_DB'] = config.get('DBSIMI', 'db')
+    app.config['MYSQL_DATABASE_HOST'] = config.get('DBSIMI', 'dbhost')
+    dbuser = config.get('DB', 'dbusername')
+    dbpass = config.get('DB', 'dbpassword')
+    db = config.get('DB', 'db')
+    dbhost = config.get('DB', 'dbhost')
+    dirlog = config.get('GLOBAL', 'dirlog')
+    dirusrrol = config.get('GLOBAL', 'dirusrrol')
+
 
 
 class Importador(Resource):
@@ -104,21 +129,25 @@ class ListaSimis(Resource):
         self.grpMap['director_importacion'] = ['director_nacional']
         self.grpMap['director_nacional'] = []
 
-    def post(self):
+    # def post(self):
+    def get(self):
         # DB SIMI
         parser2 = reqparse.RequestParser()
-        parser2.add_argument('listaSimi', type=unicode, required=True)
+        # parser2.add_argument('listaSimi', type=unicode, required=True)
+        parser2.add_argument('usuario', type=unicode, required=True)
         rargs = parser2.parse_args()
-        listaSimis = rargs['listaSimi']
-        lista = listaSimis.split(',')
-        simis = self.fetch_simis(lista)
+        # listaSimis = rargs['listaSimi']
+        grp = self.readUserGroup(rargs['usuario'])
+        strTask = self.listTaskByGroup(grp)
+        listaS = strTask.split(',')
+        simis = self.fetch_simis(listaS)
         return simis
 
-    def fetch_simis(self,lista):
+    def fetch_simis(self, lista):
         dataJson2 = []
         dbSimi = mysql.connect()
         # DB JBPM
-        dbJbpm = MySQLdb.connect(host=host, user=user, passwd=passw, db=db)
+        dbJbpm = MySQLdb.connect(host=dbhost, user=dbuser, passwd=dbpass, db=db)
         # dbJbpm = MySQLdb.connect(host="localhost", user="jbpm", passwd="password", db="simidb")
         cursorJbpm = dbJbpm.cursor()
 
@@ -215,40 +244,78 @@ class ListaSimis(Resource):
 
                     dataJson2.append(eleJson)
 
+            print len(dataJson2)
             return dataJson2
 
         except Exception as e:
+            app.logger.error('ERROR: ' + str(e) + '.')
             return {'error': str(e)}
 
         finally:
             dbJbpm.close()
             dbSimi.close()
 
+
+    def readUserGroup(self, potentialOwner):
+        f = open(dirusrrol + '/application-roles.properties', 'r')
+        lista = ""
+        for line in f:
+            if potentialOwner in line:
+                if line[-1] == '\n':
+                    line = line[:-1]
+                    line = line.replace(potentialOwner + "=", "")
+                    line = re.sub(r'\s', '', line)
+                    fields = line.split(',')
+                    for variable in fields:
+                        if variable != "rest-all" and variable != "user" and variable != "manager" and variable != "admin":
+                            lista = lista + "'" + variable + "'" + ","
+                    lista = lista[:-1]
+                    app.logger.debug('DEB: readUserGroup: ' + lista + '.')
+        return lista
+
+
+    def listTaskByGroup(self, group):
+        # DB JBPM
+        dbJbpm = MySQLdb.connect(host=dbhost, user=dbuser, passwd=dbpass, db=db)
+        cursorJbpm = dbJbpm.cursor()
+        listaS = ''
+
+        query_string1 = "SELECT task_id FROM PeopleAssignments_PotOwners " \
+                        "WHERE entity_id IN (" +group+ ")"
+
+        cursorJbpm.execute(query_string1)
+        dataResult = cursorJbpm.fetchall()
+
+        for task in dataResult:
+            listaS = listaS + str(task[0]) + ','
+
+        listaS = listaS[:-1]
+
+        app.logger.debug('DEB: Cant:' + str(len(dataResult)) + ' listTaskByGroup: ' + str(listaS) + '.')
+
+        return listaS
+
+
+    def cant_task(self,lista):
+        cantTask = len(lista)
+
+        return cantTask
+
+
+
 api.add_resource(Importador, '/Importador')
 api.add_resource(ListaSimis, '/ListaSimis')
 
-if len(sys.argv) == 9:
+if len(sys.argv) == 2:
     # MySQL configurations
-    app.config['MYSQL_DATABASE_USER'] = sys.argv[1]
-    app.config['MYSQL_DATABASE_PASSWORD'] = sys.argv[2]
-    #app.config['MYSQL_DATABASE_PASSWORD'] = 'FTR$%^3w1'
-    app.config['MYSQL_DATABASE_DB'] = sys.argv[3]
-    app.config['MYSQL_DATABASE_HOST'] = sys.argv[4]
-    host = sys.argv[5]
-    user = sys.argv[6]
-    passw = sys.argv[7]
-    db = sys.argv[8]
+    init_config(sys.argv[1])
+
 else:
     print "Parametros Incorrectos"
     exit()
 
-    #DEVELOPMENT
-    # app.config['MYSQL_DATABASE_USER'] = 'root'
-    # app.config['MYSQL_DATABASE_PASSWORD'] = 'root'
-    # app.config['MYSQL_DATABASE_PASSWORD'] = 'FTR$%^3w1'
-    # app.config['MYSQL_DATABASE_DB'] = 'SIMI'
-    # app.config['MYSQL_DATABASE_HOST'] = 'localhost'
-
-
 if __name__ == '__main__':
-    app.run(debug=True,host='0.0.0.0', port=8111)
+    handler = RotatingFileHandler(dirlog + '/error.log', maxBytes=100000000, backupCount=1)
+    handler.setLevel(logging.ERROR)
+    app.logger.addHandler(handler)
+    app.run(debug=True, host='0.0.0.0', port=8111)
