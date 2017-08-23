@@ -9,6 +9,8 @@ import sys
 import MySQLdb
 import re
 import ConfigParser
+import requests
+from requests.auth import HTTPBasicAuth
 import json
 
 
@@ -27,6 +29,10 @@ def init_config(configFile):
     global dbhost
     global dirlog
     global dirusrrol
+    global urlAPI
+    global usrAPI
+    global passAPI
+
     app.config['MYSQL_DATABASE_USER'] = config.get('DBSIMI', 'dbusername')
     app.config['MYSQL_DATABASE_PASSWORD'] = config.get('DBSIMI', 'dbpassword')
     app.config['MYSQL_DATABASE_DB'] = config.get('DBSIMI', 'db')
@@ -37,6 +43,10 @@ def init_config(configFile):
     dbhost = config.get('DB', 'dbhost')
     dirlog = config.get('GLOBAL', 'dirlog')
     dirusrrol = config.get('GLOBAL', 'dirusrrol')
+    urlAPI = config.get('GLOBAL', 'urlAPIJbpm')
+    usrAPI = config.get('GLOBAL', 'usrAPI')
+    passAPI = config.get('GLOBAL', 'passAPI')
+
 
 
 
@@ -142,19 +152,36 @@ class ListaSimis(Resource):
         self.grpMap['director_importacion'] = ['director_nacional']
         self.grpMap['director_nacional'] = []
 
-    # def post(self):
     def get(self):
         # DB SIMI
         parser2 = reqparse.RequestParser()
-        # parser2.add_argument('listaSimi', type=unicode, required=True)
         parser2.add_argument('usuario', type=unicode, required=True)
+        parser2.add_argument('p', type=unicode, required=True)
+
         rargs = parser2.parse_args()
-        # listaSimis = rargs['listaSimi']
-        grp = self.readUserGroup(rargs['usuario'])
-        strTask = self.listTaskByGroup(grp)
-        listaS = strTask.split(',')
-        simis = self.fetch_simis(listaS)
-        return simis
+        usuario = rargs['usuario']
+        page = rargs['p']
+
+        url = urlAPI + '&potentialOwner='+usuario+'&p='+page+'&s=1000'
+        headers = {'Accept': 'application/json'}
+        r = requests.get(url, auth=HTTPBasicAuth(usrAPI, passAPI), headers=headers)
+
+        if r.status_code == 200:
+            data = r.json()
+            cant = len(data['taskSummaryList'])
+            data = data['taskSummaryList']
+            lSimis = ''
+            for index in range(cant):
+                reg = str(data[index]['id']) + ','
+                lSimis = lSimis + reg
+            lSimis = lSimis[:-1]
+            app.logger.debug('DEB: Cant:' + str(len(lSimis.split(','))) + ' listTaskByUser: ' + str(lSimis) + '.')
+        else:
+            app.logger.error('ERR: ' + r.status_code + '.')
+
+        resultado = self.fetch_simis(lSimis)
+        return resultado
+
 
     def fetch_simis(self, lista):
         dataJson2 = []
@@ -162,101 +189,72 @@ class ListaSimis(Resource):
         # DB JBPM
         dbJbpm = MySQLdb.connect(host=dbhost, user=dbuser, passwd=dbpass, db=db)
         cursorJbpm = dbJbpm.cursor()
-
         try:
-            lMil = ''
             lp = ''
-            cantTask = len(lista)
-            cont = 0
-            cont2 = 0
-            lista2 = []
-            for index in range(cantTask):
-                reg = lista[index] + ','
-                lMil = lMil + reg
-                cont = cont + 1
-                if cont > 998:
-                    cont = 0
-                    tmp = len(lMil)
-                    lMil = lMil[:tmp - 1]
-                    o = {cont2: lMil}
-                    lista2.append(o)
-                    cont2 = cont2 + 1
-                    lMil = ''
-            tmp = len(lMil)
-            lMil = lMil[:tmp - 1]
-            o = {cont2: lMil}
-            lista2.append(o)
+            query_string1 = "SELECT tvi1.processinstanceid, tvi1.taskId, tvi1.value as actions_available "\
+                            "FROM  TaskVariableImpl as tvi1 where tvi1.name = 'actions_available' "\
+                            "and tvi1.taskId in (" + lista + ") " \
+                            "order by tvi1.processinstanceid;"
 
-            for ind in range(len(lista2)):
-                if lista2[ind][ind] == '':
-                    continue
-                query_string1 = "SELECT tvi1.processinstanceid, tvi1.taskId, tvi1.value as actions_available "\
-                                "FROM  TaskVariableImpl as tvi1 where tvi1.name = 'actions_available' "\
-                                "and tvi1.taskId in (" + lista2[ind][ind] + ") " \
-                                "order by tvi1.processinstanceid;"
+            cursorJbpm.execute(query_string1)
 
-                cursorJbpm.execute(query_string1)
+            data1 = cursorJbpm.fetchall()
 
-                data1 = cursorJbpm.fetchall()
-
-                for index0 in range(len(data1)):
-                    if index0 == 0:
-                        reg = str(data1[index0][0])
-                        lp = lp + reg
-                    else:
-                        reg = ',' + str(data1[index0][0])
-                        lp = lp + reg
+            for index0 in range(len(data1)):
+                if index0 == 0:
+                    reg = str(data1[index0][0])
+                    lp = lp + reg
+                else:
+                    reg = ',' + str(data1[index0][0])
+                    lp = lp + reg
 
 
-                query_string3 = " SELECT vil.processInstanceId, vil.variableId, vil.value from  VariableInstanceLog  vil " \
-                                "where vil.variableId in ('djai_estado', 'djai_id_simi', 'grp', 'djai_cuit_imp', " \
-                                "'djai_raz_soc_imp', 'djai_fob_bi34', 'djai_fech_env_afip','estado_simi')" \
-                                "and vil.processinstanceid in (" + lp + ") "\
-                                "order by vil.processinstanceid, variableId;"
+            query_string3 = " SELECT vil.processInstanceId, vil.variableId, vil.value from  VariableInstanceLog  vil " \
+                            "where vil.variableId in ('djai_estado', 'djai_id_simi', 'grp', 'djai_cuit_imp', " \
+                            "'djai_raz_soc_imp', 'djai_fob_bi34', 'djai_fech_env_afip','estado_simi')" \
+                            "and vil.processinstanceid in (" + lp + ") "\
+                            "order by vil.processinstanceid, variableId;"
 
-                cursorJbpm.execute(query_string3)
+            cursorJbpm.execute(query_string3)
+            data3 = cursorJbpm.fetchall()
 
-                data3 = cursorJbpm.fetchall()
+            lp = ''
 
-                lp = ''
-
-
-                for index1 in range(len(data1)):
-                    eleJson = {'process_instance_id': data1[index1][0],
-                               'task_id': data1[index1][1],
-                               'actions_available': data1[index1][2]}
-                    for index3 in range(len(data3)):
-                        if data1[index1][0] == data3[index3][0]:
-                            #print "eleJson data3[index3][1]:", eleJson[data3[index3][1]]
-                            if data3[index3][1] == 'grp':
-                                groups = self.grpMap[data3[index3][2]]
-                                eleJson['escale_to'] = groups
-                                eleJson[data3[index3][1]] = data3[index3][2]
-                            else:
-                                eleJson[data3[index3][1]] = data3[index3][2]
+            for index1 in range(len(data1)):
+                eleJson = {'process_instance_id': data1[index1][0],
+                           'task_id': data1[index1][1],
+                           'actions_available': data1[index1][2]}
+                for index3 in range(len(data3)):
+                    if data1[index1][0] == data3[index3][0]:
+                        if data3[index3][1] == 'grp':
+                            groups = self.grpMap[data3[index3][2]]
+                            eleJson['escale_to'] = groups
+                            eleJson[data3[index3][1]] = data3[index3][2]
                         else:
-                            continue
+                            eleJson[data3[index3][1]] = data3[index3][2]
+                    else:
+                        continue
 
-                    cursorSimi = dbSimi.cursor()
+                cursorSimi = dbSimi.cursor()
 
-                    query_string2 = "SELECT porcentaje_procesado_lna, porcentaje_indicador_anio_actual_lna, "\
-                                    "total_importado_anio_anterior_lna "\
-                                    "FROM  Importadores im "\
-                                    "WHERE im.id_persona = %s; "
+                query_string2 = "SELECT porcentaje_procesado_lna, porcentaje_indicador_anio_actual_lna, "\
+                                "total_importado_anio_anterior_lna "\
+                                "FROM  Importadores im "\
+                                "WHERE im.id_persona = %s; "
 
-                    cursorSimi.execute(query_string2, eleJson['djai_cuit_imp'])
-                    data2 = cursorSimi.fetchone()
+                cursorSimi.execute(query_string2, eleJson['djai_cuit_imp'])
+                data2 = cursorSimi.fetchone()
 
-                    if data2 == None:
-                        data2 = [0, 0, 0]
+                if data2 == None:
+                    data2 = [0, 0, 0]
 
-                    eleJson['impor_porc_lna'] = data2[0]
-                    eleJson['impor_porc_actual_lna'] = data2[1]
-                    eleJson['impor_impor_ant_lna'] = data2[2]
+                eleJson['impor_porc_lna'] = data2[0]
+                eleJson['impor_porc_actual_lna'] = data2[1]
+                eleJson['impor_impor_ant_lna'] = data2[2]
 
-                    dataJson2.append(eleJson)
+                dataJson2.append(eleJson)
 
-            print len(dataJson2)
+            # print len(dataJson2)
             return dataJson2
 
         except Exception as e:
@@ -266,53 +264,6 @@ class ListaSimis(Resource):
         finally:
             dbJbpm.close()
             dbSimi.close()
-
-
-    def readUserGroup(self, potentialOwner):
-        f = open(dirusrrol + '/application-roles.properties', 'r')
-        lista = ""
-        for line in f:
-            if potentialOwner in line:
-                if line[-1] == '\n':
-                    line = line[:-1]
-                    line = line.replace(potentialOwner + "=", "")
-                    line = re.sub(r'\s', '', line)
-                    fields = line.split(',')
-                    for variable in fields:
-                        if variable != "rest-all" and variable != "user" and variable != "manager" and variable != "admin":
-                            lista = lista + "'" + variable + "'" + ","
-                    lista = lista[:-1]
-                    app.logger.debug('DEB: readUserGroup: ' + lista + '.')
-        return lista
-
-
-    def listTaskByGroup(self, group):
-        # DB JBPM
-        dbJbpm = MySQLdb.connect(host=dbhost, user=dbuser, passwd=dbpass, db=db)
-        cursorJbpm = dbJbpm.cursor()
-        listaS = ''
-
-        query_string1 = "SELECT task_id FROM PeopleAssignments_PotOwners " \
-                        "WHERE entity_id IN (" +group+ ")"
-
-        cursorJbpm.execute(query_string1)
-        dataResult = cursorJbpm.fetchall()
-
-        for task in dataResult:
-            listaS = listaS + str(task[0]) + ','
-
-        listaS = listaS[:-1]
-
-        app.logger.debug('DEB: Cant:' + str(len(dataResult)) + ' listTaskByGroup: ' + str(listaS) + '.')
-
-        return listaS
-
-
-    def cant_task(self,lista):
-        cantTask = len(lista)
-
-        return cantTask
-
 
 
 api.add_resource(Importador, '/Importador')
