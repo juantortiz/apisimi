@@ -155,6 +155,8 @@ class ListaSimis(Resource):
     def get(self):
         # DB SIMI
         parser2 = reqparse.RequestParser()
+        basic = request.authorization
+
         parser2.add_argument('usuario', type=unicode, required=True)
         parser2.add_argument('p', type=unicode, required=True)
 
@@ -162,9 +164,11 @@ class ListaSimis(Resource):
         usuario = rargs['usuario']
         page = rargs['p']
 
-        url = urlAPI + '&potentialOwner='+usuario+'&p='+page+'&s=1000'
+        url = urlAPI + '&potentialOwner='+usuario+'&p='+page+'&s=100'
         headers = {'Accept': 'application/json'}
-        r = requests.get(url, auth=HTTPBasicAuth(usrAPI, passAPI), headers=headers)
+        auth=HTTPBasicAuth(basic.username, basic.password)
+        r = requests.get(url, auth=auth, headers=headers)
+        lsimis = ''
 
         if r.status_code == 200:
             data = r.json()
@@ -177,7 +181,7 @@ class ListaSimis(Resource):
             lSimis = lSimis[:-1]
             app.logger.debug('DEB: Cant:' + str(len(lSimis.split(','))) + ' listTaskByUser: ' + str(lSimis) + '.')
         else:
-            app.logger.error('ERR: ' + r.status_code + '.')
+            app.logger.error('ERR: ' + str(r.status_code) + '.')
 
         resultado = self.fetch_simis(lSimis)
         return resultado
