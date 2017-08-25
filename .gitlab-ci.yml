@@ -44,6 +44,7 @@ deploy_to_prod:
         - master
     when: manual
     script: 
+        - pkill -f api/api.py
         - cd /var/www/html/simi/api
         - git fetch --all
         - git reset --hard origin/$CI_COMMIT_REF_NAME
