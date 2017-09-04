@@ -7,11 +7,9 @@ from flaskext.mysql import MySQL
 from flask_cors import CORS
 import sys
 import MySQLdb
-import re
 import ConfigParser
 import requests
 from requests.auth import HTTPBasicAuth
-import json
 
 
 app = Flask(__name__)
@@ -29,7 +27,8 @@ def init_config(configFile):
     global dbhost
     global dirlog
     global dirusrrol
-    global urlAPI
+    global urlAPITask
+    global urlAPITaskSearch
     global usrAPI
     global passAPI
 
@@ -43,24 +42,10 @@ def init_config(configFile):
     dbhost = config.get('DB', 'dbhost')
     dirlog = config.get('GLOBAL', 'dirlog')
     dirusrrol = config.get('GLOBAL', 'dirusrrol')
-    urlAPI = config.get('GLOBAL', 'urlAPIJbpm')
+    urlAPITask = config.get('GLOBAL', 'urlAPITask')
+    urlAPITaskSearch = config.get('GLOBAL', 'urlAPITaskSearch')
     usrAPI = config.get('GLOBAL', 'usrAPI')
     passAPI = config.get('GLOBAL', 'passAPI')
-
-
-
-
-class Query(Resource):
-    def __init__(self):
-        self.args = {}
-
-    def get(self):
-        self.args = request.args
-        return self.getSimis()
-
-    def getSimis(self):
-        buscador = ListaSimis()
-        return buscador.fetch_simis(['9426','19427'])
 
 
 class Importador(Resource):
@@ -132,6 +117,7 @@ class Importador(Resource):
         finally:
             conn.close()
 
+
 class ListaSimis(Resource):
 
     def __init__(self):
@@ -153,22 +139,30 @@ class ListaSimis(Resource):
         self.grpMap['director_nacional'] = []
 
     def get(self):
+
+        lSimis = self.getTask()
+        resultado = self.fetch_simis(lSimis)
+
+        return resultado
+
+    def getTask(self):
         # DB SIMI
         parser2 = reqparse.RequestParser()
         basic = request.authorization
 
         parser2.add_argument('usuario', type=unicode, required=True)
         parser2.add_argument('p', type=unicode, required=True)
+        parser2.add_argument('s', type=unicode, required=True)
 
         rargs = parser2.parse_args()
         usuario = rargs['usuario']
         page = rargs['p']
+        size = rargs['s']
 
-        url = urlAPI + '&potentialOwner='+usuario+'&p='+page+'&s=100'
+        url = urlAPITask + '&p=' + page + '&s=' + size
         headers = {'Accept': 'application/json'}
-        auth=HTTPBasicAuth(basic.username, basic.password)
+        auth = HTTPBasicAuth(basic.username, basic.password)
         r = requests.get(url, auth=auth, headers=headers)
-        lsimis = ''
 
         if r.status_code == 200:
             data = r.json()
@@ -183,9 +177,7 @@ class ListaSimis(Resource):
         else:
             app.logger.error('ERR: ' + str(r.status_code) + '.')
 
-        resultado = self.fetch_simis(lSimis)
-        return resultado
-
+        return lSimis
 
     def fetch_simis(self, lista):
         dataJson2 = []
@@ -269,10 +261,124 @@ class ListaSimis(Resource):
             dbJbpm.close()
             dbSimi.close()
 
+class Query(Resource):
+
+    def __init__(self):
+        self.args = {}
+
+    def get(self):
+        self.args = request.args
+        parser = reqparse.RequestParser()
+
+        parser.add_argument('simis', type=unicode)
+        parser.add_argument('pa', type=unicode)
+        parser.add_argument('cuit', type=unicode)
+        parser.add_argument('rz', type=unicode)
+
+        rargs = parser.parse_args()
+        listaIdSImis = self.listaIdSimis(rargs)
+
+        listaTasks = params_to_string(listaIdSImis)
+        resultado = self.do_request(listaTasks)
+
+        return resultado
+
+    def listaIdSimis(self, rargs):
+
+        #DB SIMI
+        dbSimi = mysql.connect()
+        cursor = dbSimi.cursor()
+        flag = False
+        regs = ''
+        listaIdSimis = {}
+
+        try:
+            query_string = "SELECT DISTINCT destinacion " \
+                           "FROM simi_pa " \
+
+            if rargs['simis'] and rargs['simis'] != 'undefined':
+                flag = True
+                query_string += "WHERE destinacion IN (" + rargs['simis'] + ")"
+
+            if rargs['pa'] and flag and rargs['pa'] and rargs['pa'] != 'undefined':
+                query_string += "AND posicion_arancelaria IN (" + rargs['pa'] + ")"
+
+            if rargs['pa'] and not flag and rargs['pa'] != 'undefined':
+                flag = True
+                query_string += "WHERE posicion_arancelaria IN (" + rargs['pa'] + ")"
+
+            if rargs['cuit'] and flag and rargs['cuit'] != 'undefined':
+                query_string += "AND cuit IN (" + rargs['cuit'] + ")"
+
+            if rargs['cuit'] and not flag and rargs['cuit'] != 'undefined':
+                flag = True
+                query_string += "WHERE cuit IN (" + rargs['cuit'] + ")"
+
+            if rargs['rz'] and flag and rargs['rz'] != 'undefined':
+                query_string += "AND razon_social IN (" + rargs['rz'] + ")"
+
+            if rargs['rz'] and not flag and rargs['rz'] != 'undefined':
+                query_string += "WHERE razon_social IN (" + rargs['rz'] + ")"
+
+            cursor.execute(query_string)
+            data = cursor.fetchall()
+
+            for index in range(len(data)):
+                reg = str(data[index][0]) + ','
+                regs = regs + reg
+            listaIdSimis['id_simis'] = regs[:-1]
+            print listaIdSimis
+
+            return listaIdSimis
+
+        except Exception as e:
+            app.logger.error('ERROR: ' + str(e) + '.')
+            return {'error': str(e)}
+
+        finally:
+            dbSimi.close()
+
+    def do_request(self, params):
+        busqueda = ListaSimis()
+        url = (urlAPITaskSearch + params)
+        headers = {'Accept': 'application/json'}
+        basic = request.authorization
+        auth = HTTPBasicAuth(basic.username, basic.password)
+        r = requests.get(url, auth=auth, headers=headers)
+        data = r.json()
+        print data
+
+        if r.status_code == 200:
+            data = r.json()
+            cant = len(data['taskInfoList'])
+            data = data['taskInfoList']
+            lSimis = ''
+            for index in range(cant):
+                reg = str(data[index]['taskSummaries'][0]['id']) + ','
+                lSimis = lSimis + reg
+            lSimis = lSimis[:-1]
+            app.logger.debug('DEB: Cant:' + str(len(lSimis.split(','))) + ' listTaskByUser: ' + str(lSimis) + '.')
+        else:
+            app.logger.error('ERR: ' + str(r.status_code) + '.')
+
+        resultado = busqueda.fetch_simis(lSimis)
+        print resultado
+        return resultado
+
 
 api.add_resource(Importador, '/Importador')
 api.add_resource(ListaSimis, '/ListaSimis')
 api.add_resource(Query, '/Query')
+
+
+def params_to_string(params):
+    query_params = ''
+    for key in params.keys():
+        values = params.get(key).split(',')
+        for value in values:
+            query_params += '&vv=' + value
+    return query_params
+
 
 if len(sys.argv) == 2:
     # MySQL configurations
@@ -287,3 +393,4 @@ if __name__ == '__main__':
     handler.setLevel(logging.ERROR)
     app.logger.addHandler(handler)
     app.run(debug=True, host='0.0.0.0', port=8111)
+
