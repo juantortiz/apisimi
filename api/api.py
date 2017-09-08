@@ -234,23 +234,41 @@ class ListaSimis(Resource):
                 cursorSimi = dbSimi.cursor()
 
                 query_string2 = "SELECT porcentaje_procesado_lna, porcentaje_indicador_anio_actual_lna, "\
-                                "total_importado_anio_anterior_lna "\
+                                "total_importado_anio_anterior_lna, tiene_acuerdo_exp_imp_lna, "\
+                                "monto_acuerdo_exp_imp_lna, porcentaje_indicador_anio_actual_lna "\
                                 "FROM  Importadores im "\
                                 "WHERE im.id_persona = %s; "
 
                 cursorSimi.execute(query_string2, eleJson['djai_cuit_imp'])
                 data2 = cursorSimi.fetchone()
 
+                cursorBlob = dbSimi.cursor()
+
+                query_string3 = "SELECT anexo_lna1 " \
+                                "FROM  acuerdo_anexos aa " \
+                                "WHERE aa.djai = %s; "
+
+                cursorBlob.execute(query_string3, eleJson['djai_id_simi'])
+                dataBlob = cursorBlob.fetchone()
+
                 if data2 == None:
                     data2 = [0, 0, 0]
+
+                if dataBlob == None:
+                    dataBlob = [0]
 
                 eleJson['impor_porc_lna'] = data2[0]
                 eleJson['impor_porc_actual_lna'] = data2[1]
                 eleJson['impor_impor_ant_lna'] = data2[2]
-
+                eleJson['impor_tiene_acuerdo_exp_imp_lna'] = data2[3]
+                eleJson['impor_monto_acuerdo_exp_imp_lna'] = data2[4]
+                eleJson['impor_porcentaje_indicador_anio_actual_lna'] = data2[5]
+                eleJson['anexo_lna_1'] = dataBlob[0]
+                # if dataBlob != 0:
+                #     print dataBlob[0]
                 dataJson2.append(eleJson)
 
-            # print len(dataJson2)
+            # print dataJson2
             return dataJson2
 
         except Exception as e:
@@ -260,6 +278,7 @@ class ListaSimis(Resource):
         finally:
             dbJbpm.close()
             dbSimi.close()
+
 
 class Query(Resource):
 
