@@ -54,6 +54,7 @@ def eliminar(simis):
     print "Abortando simi"
     for simi in simis:
         url = base_url + instance + '/process/instance/' + str(simi) + '/abort'
+        print url
         r = requests.post(url, auth=HTTPBasicAuth(username, password))
         if r.status_code == 200:
             global counterOk
@@ -104,6 +105,7 @@ if __name__ == '__main__':
     start_time = datetime.now()
     instance = sys.argv[1]
     init_config(sys.argv[2])
+
     main();
     print("Hubo \t" + str(counterOk) + "\t Simis abortadas")
     print("Hubo \t" + str(counterNOK) + "\t Simis no pudieron ser abortadas")
