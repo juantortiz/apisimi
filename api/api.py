@@ -12,6 +12,8 @@ import requests
 from requests.auth import HTTPBasicAuth
 
 
+
+
 app = Flask(__name__)
 api = Api(app)
 CORS(app)
@@ -204,7 +206,7 @@ class ListaSimis(Resource):
                     reg = ',' + str(data1[index0][0])
                     lp = lp + reg
 
-
+            # Devuelve tabla con clave-valor (por ej : djai_estado --> 0; djai_id_simi --> 17001SIMI348320M )
             query_string3 = " SELECT vil.processInstanceId, vil.variableId, vil.value from  VariableInstanceLog  vil " \
                             "where vil.variableId in ('djai_estado', 'djai_id_simi', 'grp', 'djai_cuit_imp', " \
                             "'djai_raz_soc_imp', 'djai_fob_bi34', 'djai_fech_env_afip','estado_simi')" \
@@ -233,6 +235,7 @@ class ListaSimis(Resource):
 
                 cursorSimi = dbSimi.cursor()
 
+                # Se unifican querys en una sola vista para traer datos, a su vez se agregan datos.
                 query_string2 = "SELECT porcentaje_procesado_lna, porcentaje_indicador_anio_actual_lna, "\
                                 "total_importado_anio_anterior_lna, tiene_acuerdo_exp_imp_lna, "\
                                 "monto_acuerdo_exp_imp_lna, porcentaje_indicador_anio_actual_lna "\
@@ -257,15 +260,17 @@ class ListaSimis(Resource):
                 if dataBlob == None:
                     dataBlob = [0]
 
-                eleJson['impor_porc_lna'] = data2[0]
-                eleJson['impor_porc_actual_lna'] = data2[1]
-                eleJson['impor_impor_ant_lna'] = data2[2]
+                eleJson['impor_porc_lna'] = str(data2[0])
+                eleJson['impor_porc_actual_lna'] = str(data2[1])
+                eleJson['impor_impor_ant_lna'] = str(data2[2])
                 eleJson['impor_tiene_acuerdo_exp_imp_lna'] = data2[3]
-                eleJson['impor_monto_acuerdo_exp_imp_lna'] = data2[4]
-                eleJson['impor_porcentaje_indicador_anio_actual_lna'] = data2[5]
+                eleJson['impor_monto_acuerdo_exp_imp_lna'] = str(data2[4])
+                eleJson['impor_porcentaje_indicador_anio_actual_lna'] = str(data2[5])
                 eleJson['anexo_lna_1'] = dataBlob[0]
                 # if dataBlob != 0:
                 #     print dataBlob[0]
+
+                # Hacer una lista de jsons con los detalles.
                 dataJson2.append(eleJson)
 
             # print dataJson2
