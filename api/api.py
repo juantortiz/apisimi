@@ -1,3 +1,5 @@
+import datetime
+import decimal
 import logging
 from logging.handlers import RotatingFileHandler
 from flask import Flask, jsonify, request
@@ -273,6 +275,126 @@ class ListaSimis(Resource):
                 # Hacer una lista de jsons con los detalles.
                 dataJson2.append(eleJson)
 
+            # print dataJson2
+            return dataJson2
+
+        except Exception as e:
+            app.logger.error('ERROR: ' + str(e) + '.')
+            return {'error': str(e)}
+
+        finally:
+            dbJbpm.close()
+            dbSimi.close()
+
+    def fetch_simis_2(self, lista):
+        dataJson2 = []
+        dbSimi = mysql.connect()
+        # DB JBPM
+        dbJbpm = MySQLdb.connect(host=dbhost, user=dbuser, passwd=dbpass, db=db)
+        cursorJbpm = dbJbpm.cursor()
+        try:
+            lp = ''
+            query_string1 = "SELECT tvi1.processinstanceid, tvi1.taskId, tvi1.value as actions_available "\
+                            "FROM  TaskVariableImpl as tvi1 where tvi1.name = 'actions_available' "\
+                            "and tvi1.taskId in (" + lista + ") " \
+                            "order by tvi1.processinstanceid;"
+
+            cursorJbpm.execute(query_string1)
+            data1 = cursorJbpm.fetchall()
+
+            for index0 in range(len(data1)):
+                if index0 == 0:
+                    reg = str(data1[index0][0])
+                    lp = lp + reg
+                else:
+                    reg = ',' + str(data1[index0][0])
+                    lp = lp + reg
+
+            # Devuelve tabla con clave-valor (por ej : djai_estado --> 0; djai_id_simi --> 17001SIMI348320M )
+            query_string3 = " SELECT vil.processInstanceId, vil.variableId, vil.value from  VariableInstanceLog  vil " \
+                            "where vil.variableId in ('djai_estado', 'djai_id_simi', 'grp', 'djai_cuit_imp', " \
+                            "'djai_raz_soc_imp', 'djai_fob_bi34', 'djai_fech_env_afip','estado_simi')" \
+                            "and vil.processinstanceid in (" + lp + ") "\
+                            "order by vil.processinstanceid, variableId;"
+
+            cursorJbpm.execute(query_string3)
+            data3 = cursorJbpm.fetchall()
+
+            lp = ''
+
+            for index1 in range(len(data1)):
+                eleJson = {'process_instance_id': data1[index1][0],
+                           'task_id': data1[index1][1],
+                           'actions_available': data1[index1][2]}
+
+                for index3 in range(len(data3)):
+                    if data1[index1][0] == data3[index3][0]: # Verifica que tenga el PInstanceId
+                        if data3[index3][1] == 'grp':
+                            groups = self.grpMap[data3[index3][2]] # Depende el grupo, se fija a quienes puede escalar.
+                            eleJson['escale_to'] = groups
+                            eleJson[data3[index3][1]] = data3[index3][2]
+                        else:
+                            eleJson[data3[index3][1]] = data3[index3][2]
+                    else:
+                        continue
+
+                cursorSimi = dbSimi.cursor()
+
+                # Se unifican querys en una sola vista para traer datos, a su vez se agregan datos.
+                query_HeaderView = "SELECT " \
+                                        "destinacion                          "\
+                                        ",estado                              "\
+                                        ",fecha_ofic                          "\
+                                        ",fecha_caducidad					  "\
+                                        ",fecha_envio_afip                    "\
+                                        ",fecha_envio_afip_motivo_observacion "\
+                                        ",fob_dolares_disponible              "\
+                                        ",fob_dolares_lna_disponible          "\
+                                        ",fecha_anulacion                     "\
+                                        ",motivo_bloqueo                      "\
+                                        ",fecha_salidas                       "\
+                                        ",cudap                               "\
+                                        ",monto_acuerdo_exp_imp_lna           "\
+                                        ",porcentaje_indicador_anio_actual_lna"\
+                                        ",tiene_acuerdo_exp_imp_lna           "\
+                                        ",acumulado_procesado_lna             "\
+                                        ",id_actividad                        "\
+                                        ",desc_actividad                      "\
+                                        ",acuerdo_cargado                     "\
+                                   "FROM simidb.v_simi_cabecera "\
+                                   "WHERE destinacion = %s"
+
+
+                cursorSimi.execute(query_HeaderView, eleJson['djai_id_simi'])
+                simiHeader = cursorSimi.fetchone()
+                fieldsHeader = cursorSimi.description
+
+                for (idx,fieldSimi) in enumerate(simiHeader):
+                    if (isinstance(fieldSimi,decimal.Decimal) or isinstance(fieldSimi,datetime.datetime)):
+                        eleJson['h_'+(fieldsHeader[idx][0])] = str(fieldSimi)
+                    else:
+                        eleJson['h_'+(fieldsHeader[idx][0])] = fieldSimi
+
+                cursorSimi.close()
+
+                # Hacer una lista de jsons con los detalles.
+                detailList = []
+                detailSimi = {
+                    "pa1" : "ssss",
+                    "pa2": "ssss",
+                    "pa3": "aaaa"
+                }
+
+                detailList.append(detailSimi)
+                detailSimi = {
+                    "pa1": "ssss",
+                    "pa2": "ssss",
+                    "pa4": "aaaa"
+                }
+                detailList.append(detailSimi)
+                eleJson["listSimiDetails"] = detailList
+
+                dataJson2.append(eleJson)
             # print dataJson2
             return dataJson2
 
