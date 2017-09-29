@@ -114,13 +114,17 @@ class Importador(Resource):
                     "imp_monto_acuerdo_exp_imp_lna": data[28]
             }
 
+            for keyImp in dataJson.keys():
+                if (isinstance(dataJson[keyImp], decimal.Decimal) or isinstance(dataJson[keyImp], datetime.datetime)):
+                    dataJson[keyImp] = str(dataJson[keyImp])
+
+
             return dataJson
 
         except Exception as e:
             return {'error': str(e)}
         finally:
             conn.close()
-
 
 class ListaSimis(Resource):
 
@@ -338,7 +342,7 @@ class ListaSimis(Resource):
                     else:
                         continue
 
-                cursorSimi = dbSimi.cursor()
+                cursorSimi_Header = dbSimi.cursor()
 
                 # Se unifican querys en una sola vista para traer datos, a su vez se agregan datos.
                 query_HeaderView = "SELECT " \
@@ -365,9 +369,9 @@ class ListaSimis(Resource):
                                    "WHERE destinacion = %s"
 
 
-                cursorSimi.execute(query_HeaderView, eleJson['djai_id_simi'])
-                simiHeader = cursorSimi.fetchone()
-                fieldsHeader = cursorSimi.description
+                cursorSimi_Header.execute(query_HeaderView, eleJson['djai_id_simi'])
+                simiHeader = cursorSimi_Header.fetchone()
+                fieldsHeader = cursorSimi_Header.description
 
                 for (idx,fieldSimi) in enumerate(simiHeader):
                     if (isinstance(fieldSimi,decimal.Decimal) or isinstance(fieldSimi,datetime.datetime)):
@@ -375,23 +379,52 @@ class ListaSimis(Resource):
                     else:
                         eleJson['h_'+(fieldsHeader[idx][0])] = fieldSimi
 
-                cursorSimi.close()
+                cursorSimi_Header.close()
 
+                # Cargo la informacion de las posiciones arancelarias de la Simi en particular.
                 # Hacer una lista de jsons con los detalles.
-                detailList = []
-                detailSimi = {
-                    "pa1" : "ssss",
-                    "pa2": "ssss",
-                    "pa3": "aaaa"
-                }
 
-                detailList.append(detailSimi)
-                detailSimi = {
-                    "pa1": "ssss",
-                    "pa2": "ssss",
-                    "pa4": "aaaa"
-                }
-                detailList.append(detailSimi)
+                query_DetailView = "SELECT " \
+                                    "destinacion					" \
+                                    ",estado 		                " \
+                                    ",numero_item                   " \
+                                    ",numero_subitem                " \
+                                    ",descripcion_mercaderia        " \
+                                    ",posicion_arancelaria          " \
+                                    ",fob_dolares                   " \
+                                    ",fob_dolares_subitem           " \
+                                    ",cantidad_unidades_declarada   " \
+                                    ",pais_procedencia              " \
+                                    ",pais_origen                   " \
+                                    ",descripcion_moneda_fob        " \
+                                    ",fecha_embarque_item           " \
+                                    ",fecha_arribo_item             " \
+                                    ",fecha_ultima_modificacion     " \
+                                    ",marca_subitem                 " \
+                                    ",modelo_subitem                " \
+                                    ",descripcion_unidad_medida     " \
+                                    ",unidad_estadistica            " \
+                                    ",peso_neto_kg					" \
+                                    ",precio_unitario_subitem		" \
+                                   "FROM simidb.v_simi_detalle " \
+                                   "WHERE destinacion = %s"
+
+                cursorSimi_Detail = dbSimi.cursor()
+                cursorSimi_Detail.execute(query_DetailView, eleJson['djai_id_simi'])
+                simiDetails = cursorSimi_Detail.fetchall()
+                fieldsDetail = cursorSimi_Detail.description
+                detailList = []
+                cursorSimi_Detail.close()
+
+                for simi_Detail in simiDetails:
+                    detailSimi = {}
+                    for (idx_d, fieldSimiDetail) in enumerate(simi_Detail):
+                        if (isinstance(fieldSimiDetail, decimal.Decimal) or isinstance(fieldSimiDetail, datetime.datetime)):
+                            detailSimi['d_' + (fieldsDetail[idx_d][0])] = str(fieldSimiDetail)
+                        else:
+                            detailSimi['d_' + (fieldsDetail[idx_d][0])] = fieldSimiDetail
+                    detailList.append(detailSimi)
+
                 eleJson["listSimiDetails"] = detailList
 
                 dataJson2.append(eleJson)
