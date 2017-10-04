@@ -149,7 +149,7 @@ class ListaSimis(Resource):
     def get(self):
 
         lSimis = self.getTask()
-        resultado = self.fetch_simis(lSimis)
+        resultado = self.fetch_simis_2(lSimis)
 
         return resultado
 
