@@ -365,7 +365,7 @@ class ListaSimis(Resource):
                                         ",id_actividad                        "\
                                         ",desc_actividad                      "\
                                         ",acuerdo_cargado                     "\
-                                   "FROM simidb.v_simi_cabecera "\
+                                   "FROM simidb.simi_cabecera "\
                                    "WHERE destinacion = %s"
 
 
