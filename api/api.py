@@ -1,3 +1,4 @@
+import re
 import datetime
 import decimal
 import logging
@@ -365,7 +366,7 @@ class ListaSimis(Resource):
                                         ",id_actividad                        "\
                                         ",desc_actividad                      "\
                                         ",acuerdo_cargado                     "\
-                                   "FROM simidb.v_simi_cabecera "\
+                                   "FROM simidb.simi_cabecera "\
                                    "WHERE destinacion = %s"
 
 
@@ -439,7 +440,6 @@ class ListaSimis(Resource):
             dbJbpm.close()
             dbSimi.close()
 
-
 class Query(Resource):
 
     def __init__(self):
@@ -448,7 +448,7 @@ class Query(Resource):
     def get(self):
         self.args = request.args
         parser = reqparse.RequestParser()
-
+        parser.add_argument('accion', type=unicode)
         parser.add_argument('simis', type=unicode)
         parser.add_argument('pa', type=unicode)
         parser.add_argument('cuit', type=unicode)
@@ -456,48 +456,89 @@ class Query(Resource):
 
         rargs = parser.parse_args()
         listaIdSImis = self.listaIdSimis(rargs)
-
+        # Validar que la lista de idSimis no este vacia por que sino trae todos los resultados.
         listaTasks = params_to_string(listaIdSImis)
         resultado = self.do_request(listaTasks)
 
         return resultado
 
-    def listaIdSimis(self, rargs):
+        # destinacion
+          # Posibles estados: A,O,P,M,{null}
+        # estado_djai --> O: Observada, M: Mixta, Vacio o Null: Pendiente,
 
+        # cuit_importador
+        # razon_social_importador
+        # posicion_arancelaria
+        # fecha_ofic
+        # fecha_caducidad
+        # fecha_ultima_modificacion
+
+    def addDestinacion(self, value):
+        listPa = str(value).splitlines()
+        value = ','.join(unicode("\"" + e + "\"") for e in listPa)
+        return "destinacion IN (" + value + ")"
+
+    def addDjai(self,value):
+        if value == ' ':
+            return "estado_djai IS NULL"
+        if value == 'T':
+            return ""
+        else:
+            return "estado_djai IN ("+value+")"
+
+    def addCuit(self, value):
+        return "cuit_importador IN (" + value + ")"
+
+    def addRazon(self,value):
+        return "razon_social_importador IN (" + value + ")"
+
+    def addPA(self,value):
+        listPa = str(value).splitlines()
+        lengthPA = len(listPa[0])
+        value = ','.join(unicode("\"" + e + "\"") for e in listPa)
+
+        if lengthPA == -1:
+            lengthPA = len(value)
+        return "SUBSTRING(posicion_arancelaria,1,"+str(lengthPA)+") IN (" + value + ")"
+
+    def addDate(self, key, value):
+        return key+" (" + value + ")"
+
+    def getFilter(self, keyArg, valueArg):
+        fieldsToFind = {
+            'simis': self.addDestinacion,
+            'accion': self.addDjai,
+            'cuit': self.addCuit,
+            'rz': self.addRazon,
+            'pa': self.addPA,
+            'dFecOficIni': 'fecha_ofic',
+            'dFecCaduc': 'fecha_caducidad',
+            'dFecUltModif': 'fecha_ultima_modificacion',
+        }
+
+        return fieldsToFind[keyArg](valueArg)
+
+
+    def listaIdSimis(self, rargs):
         #DB SIMI
         dbSimi = mysql.connect()
         cursor = dbSimi.cursor()
-        flag = False
         regs = ''
         listaIdSimis = {}
+        whereClause = ""
 
         try:
             query_string = "SELECT DISTINCT destinacion " \
-                           "FROM simi_pa " \
+                           "FROM v_campos_busqueda " \
 
-            if rargs['simis'] and rargs['simis'] != 'undefined':
-                flag = True
-                query_string += "WHERE destinacion IN (" + rargs['simis'] + ")"
+            for arg in rargs:
+                if (rargs[arg] != None and rargs[arg] != 'undefined'):
+                    if (whereClause == ""):
+                        whereClause = "WHERE " + self.getFilter(arg,rargs[arg])
+                    else:
+                        whereClause = whereClause + " AND " + self.getFilter(arg,rargs[arg])
 
-            if rargs['pa'] and flag and rargs['pa'] and rargs['pa'] != 'undefined':
-                query_string += "AND posicion_arancelaria IN (" + rargs['pa'] + ")"
-
-            if rargs['pa'] and not flag and rargs['pa'] != 'undefined':
-                flag = True
-                query_string += "WHERE posicion_arancelaria IN (" + rargs['pa'] + ")"
-
-            if rargs['cuit'] and flag and rargs['cuit'] != 'undefined':
-                query_string += "AND cuit IN (" + rargs['cuit'] + ")"
-
-            if rargs['cuit'] and not flag and rargs['cuit'] != 'undefined':
-                flag = True
-                query_string += "WHERE cuit IN (" + rargs['cuit'] + ")"
-
-            if rargs['rz'] and flag and rargs['rz'] != 'undefined':
-                query_string += "AND razon_social IN (" + rargs['rz'] + ")"
-
-            if rargs['rz'] and not flag and rargs['rz'] != 'undefined':
-                query_string += "WHERE razon_social IN (" + rargs['rz'] + ")"
+            query_string = query_string + whereClause
 
             cursor.execute(query_string)
             data = cursor.fetchall()
@@ -513,7 +554,6 @@ class Query(Resource):
         except Exception as e:
             app.logger.error('ERROR: ' + str(e) + '.')
             return {'error': str(e)}
-
         finally:
             dbSimi.close()
 
@@ -540,7 +580,8 @@ class Query(Resource):
         else:
             app.logger.error('ERR: ' + str(r.status_code) + '.')
 
-        resultado = busqueda.fetch_simis(lSimis)
+        # resultado = busqueda.fetch_simis(lSimis)
+        resultado = busqueda.fetch_simis_2(lSimis)
         print resultado
         return resultado
 
