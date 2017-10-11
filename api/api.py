@@ -1,4 +1,4 @@
-import re
+import json
 import datetime
 import decimal
 import logging
@@ -387,7 +387,7 @@ class ListaSimis(Resource):
 
                 query_DetailView = "SELECT " \
                                     "destinacion					" \
-                                    ",estado 		                " \
+                                    ",estado_gestion                " \
                                     ",numero_item                   " \
                                     ",numero_subitem                " \
                                     ",descripcion_mercaderia        " \
@@ -407,6 +407,7 @@ class ListaSimis(Resource):
                                     ",unidad_estadistica            " \
                                     ",peso_neto_kg					" \
                                     ",precio_unitario_subitem		" \
+                                    ",lna                   		" \
                                    "FROM simidb.v_simi_detalle " \
                                    "WHERE destinacion = %s"
 
@@ -453,25 +454,15 @@ class Query(Resource):
         parser.add_argument('pa', type=unicode)
         parser.add_argument('cuit', type=unicode)
         parser.add_argument('rz', type=unicode)
+        parser.add_argument('dates', type=unicode)
 
         rargs = parser.parse_args()
         listaIdSImis = self.listaIdSimis(rargs)
-        # Validar que la lista de idSimis no este vacia por que sino trae todos los resultados.
+
         listaTasks = params_to_string(listaIdSImis)
         resultado = self.do_request(listaTasks)
 
         return resultado
-
-        # destinacion
-          # Posibles estados: A,O,P,M,{null}
-        # estado_djai --> O: Observada, M: Mixta, Vacio o Null: Pendiente,
-
-        # cuit_importador
-        # razon_social_importador
-        # posicion_arancelaria
-        # fecha_ofic
-        # fecha_caducidad
-        # fecha_ultima_modificacion
 
     def addDestinacion(self, value):
         listPa = str(value).splitlines()
@@ -501,8 +492,23 @@ class Query(Resource):
             lengthPA = len(value)
         return "SUBSTRING(posicion_arancelaria,1,"+str(lengthPA)+") IN (" + value + ")"
 
-    def addDate(self, key, value):
-        return key+" (" + value + ")"
+    def addDates(self, value):
+        fieldDb = {
+            "dRec":"fecha_ofic",
+            "dCad":"fecha_caducidad",
+            "dInt":"fecha_ultima_modificacion"
+        }
+
+        clause = "";
+        if (value):
+            listDates = json.loads(value);
+            for arg in listDates:
+                    if str(arg).lower().find("ini") != -1:
+                        clause += fieldDb[str(arg)[:4]] + " > \"" + listDates[arg] + "\" AND " ;
+                    if str(arg).lower().find("fin") != -1:
+                        clause += fieldDb[str(arg)[:4]] + " < \"" + listDates[arg] + "\" AND " ;
+            if (clause): clause = clause[:-5];
+        return clause;
 
     def getFilter(self, keyArg, valueArg):
         fieldsToFind = {
@@ -511,9 +517,7 @@ class Query(Resource):
             'cuit': self.addCuit,
             'rz': self.addRazon,
             'pa': self.addPA,
-            'dFecOficIni': 'fecha_ofic',
-            'dFecCaduc': 'fecha_caducidad',
-            'dFecUltModif': 'fecha_ultima_modificacion',
+            'dates': self.addDates
         }
 
         return fieldsToFind[keyArg](valueArg)
@@ -533,7 +537,7 @@ class Query(Resource):
 
             for arg in rargs:
                 if (rargs[arg] != None and rargs[arg] != 'undefined'):
-                    if (whereClause == ""):
+                    if whereClause == "":
                         whereClause = "WHERE " + self.getFilter(arg,rargs[arg])
                     else:
                         whereClause = whereClause + " AND " + self.getFilter(arg,rargs[arg])
