@@ -366,6 +366,8 @@ class ListaSimis(Resource):
                                         ",id_actividad                        "\
                                         ",desc_actividad                      "\
                                         ",acuerdo_cargado                     "\
+                                        ",tiene_acuerdo_automatico            "\
+                                        ",tiene_rump                          "\
                                    "FROM simidb.simi_cabecera "\
                                    "WHERE destinacion = %s"
 
@@ -588,7 +590,6 @@ class Query(Resource):
         resultado = busqueda.fetch_simis_2(lSimis)
         print resultado
         return resultado
-
 
 api.add_resource(Importador, '/Importador')
 api.add_resource(ListaSimis, '/ListaSimis')
