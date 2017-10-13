@@ -156,7 +156,7 @@ class ListaSimis(Resource):
         return resultado
 
     def getTask(self):
-        # DB SIMI
+        # DB SIMI - MySQL
         parser2 = reqparse.RequestParser()
         basic = request.authorization
 
