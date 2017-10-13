@@ -1,4 +1,4 @@
-import json
+# import json
 import datetime
 import decimal
 import logging
@@ -402,7 +402,8 @@ class Query(Resource):
 
         clause = "";
         if value:
-            listDates = json.loads(value);
+            # listDates = json.loads(value);
+            listDates = {};
             for arg in listDates:
                     if str(arg).lower().find("ini") != -1:
                         clause += field_db[str(arg)[:4]] + " > \"" + listDates[arg] + "\" AND ";
