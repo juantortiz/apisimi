@@ -127,6 +127,7 @@ class Importador(Resource):
         finally:
             conn.close()
 
+
 class ListaSimis(Resource):
 
     def __init__(self):
@@ -150,7 +151,7 @@ class ListaSimis(Resource):
     def get(self):
 
         lSimis = self.getTask()
-        resultado = self.fetch_simis_2(lSimis)
+        resultado = self.fetch_simis(lSimis)
 
         return resultado
 
@@ -443,6 +444,7 @@ class ListaSimis(Resource):
             dbJbpm.close()
             dbSimi.close()
 
+
 class Query(Resource):
 
     def __init__(self):
@@ -477,13 +479,13 @@ class Query(Resource):
         if value == 'T':
             return ""
         else:
-            return "estado_djai IN ("+value+")"
+            return "estado_djai IN (\""+value+"\")"
 
     def addCuit(self, value):
-        return "cuit_importador IN (" + value + ")"
+        return "cuit_importador IN (\"" + value + "\")"
 
     def addRazon(self,value):
-        return "razon_social_importador IN (" + value + ")"
+        return "razon_social_importador IN (\"" + value + "\")"
 
     def addPA(self,value):
         listPa = str(value).splitlines()
@@ -495,20 +497,20 @@ class Query(Resource):
         return "SUBSTRING(posicion_arancelaria,1,"+str(lengthPA)+") IN (" + value + ")"
 
     def addDates(self, value):
-        fieldDb = {
+        field_db = {
             "dRec":"fecha_ofic",
             "dCad":"fecha_caducidad",
             "dInt":"fecha_ultima_modificacion"
         }
 
         clause = "";
-        if (value):
+        if value:
             listDates = json.loads(value);
             for arg in listDates:
                     if str(arg).lower().find("ini") != -1:
-                        clause += fieldDb[str(arg)[:4]] + " > \"" + listDates[arg] + "\" AND " ;
+                        clause += field_db[str(arg)[:4]] + " > \"" + listDates[arg] + "\" AND ";
                     if str(arg).lower().find("fin") != -1:
-                        clause += fieldDb[str(arg)[:4]] + " < \"" + listDates[arg] + "\" AND " ;
+                        clause += field_db[str(arg)[:4]] + " < \"" + listDates[arg] + "\" AND ";
             if (clause): clause = clause[:-5];
         return clause;
 
@@ -524,7 +526,6 @@ class Query(Resource):
 
         return fieldsToFind[keyArg](valueArg)
 
-
     def listaIdSimis(self, rargs):
         #DB SIMI
         dbSimi = mysql.connect()
@@ -532,17 +533,19 @@ class Query(Resource):
         regs = ''
         listaIdSimis = {}
         whereClause = ""
-
+        filterClause = ""
         try:
             query_string = "SELECT DISTINCT destinacion " \
                            "FROM v_campos_busqueda " \
 
             for arg in rargs:
-                if (rargs[arg] != None and rargs[arg] != 'undefined'):
-                    if whereClause == "":
-                        whereClause = "WHERE " + self.getFilter(arg,rargs[arg])
-                    else:
-                        whereClause = whereClause + " AND " + self.getFilter(arg,rargs[arg])
+                if rargs[arg] is not None and rargs[arg] != 'undefined':
+                    filterClause = self.getFilter(arg, rargs[arg])
+                    if filterClause != "":
+                        if whereClause == "":
+                            whereClause = "WHERE " + filterClause
+                        else:
+                            whereClause = whereClause + " AND " + filterClause
 
             query_string = query_string + whereClause
 
@@ -586,9 +589,8 @@ class Query(Resource):
         else:
             app.logger.error('ERR: ' + str(r.status_code) + '.')
 
-        # resultado = busqueda.fetch_simis(lSimis)
-        resultado = busqueda.fetch_simis_2(lSimis)
-        print resultado
+        resultado = busqueda.fetch_simis(lSimis)
+
         return resultado
 
 api.add_resource(Importador, '/Importador')
