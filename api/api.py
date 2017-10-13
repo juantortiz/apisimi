@@ -490,6 +490,7 @@ class Query(Resource):
 
         return resultado
 
+
 api.add_resource(Importador, '/Importador')
 api.add_resource(ListaSimis, '/ListaSimis')
 api.add_resource(Query, '/Query')
