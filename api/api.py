@@ -126,6 +126,7 @@ class Importador(Resource):
         finally:
             conn.close()
 
+
 class ListaSimis(Resource):
 
     def __init__(self):
@@ -149,12 +150,12 @@ class ListaSimis(Resource):
     def get(self):
 
         lSimis = self.getTask()
-        resultado = self.fetch_simis_2(lSimis)
+        resultado = self.fetch_simis(lSimis)
 
         return resultado
 
     def getTask(self):
-        # DB SIMI
+        # DB SIMI - MySQL
         parser2 = reqparse.RequestParser()
         basic = request.authorization
 
@@ -188,109 +189,6 @@ class ListaSimis(Resource):
         return lSimis
 
     def fetch_simis(self, lista):
-        dataJson2 = []
-        dbSimi = mysql.connect()
-        # DB JBPM
-        dbJbpm = MySQLdb.connect(host=dbhost, user=dbuser, passwd=dbpass, db=db)
-        cursorJbpm = dbJbpm.cursor()
-        try:
-            lp = ''
-            query_string1 = "SELECT tvi1.processinstanceid, tvi1.taskId, tvi1.value as actions_available "\
-                            "FROM  TaskVariableImpl as tvi1 where tvi1.name = 'actions_available' "\
-                            "and tvi1.taskId in (" + lista + ") " \
-                            "order by tvi1.processinstanceid;"
-
-            cursorJbpm.execute(query_string1)
-
-            data1 = cursorJbpm.fetchall()
-
-            for index0 in range(len(data1)):
-                if index0 == 0:
-                    reg = str(data1[index0][0])
-                    lp = lp + reg
-                else:
-                    reg = ',' + str(data1[index0][0])
-                    lp = lp + reg
-
-            # Devuelve tabla con clave-valor (por ej : djai_estado --> 0; djai_id_simi --> 17001SIMI348320M )
-            query_string3 = " SELECT vil.processInstanceId, vil.variableId, vil.value from  VariableInstanceLog  vil " \
-                            "where vil.variableId in ('djai_estado', 'djai_id_simi', 'grp', 'djai_cuit_imp', " \
-                            "'djai_raz_soc_imp', 'djai_fob_bi34', 'djai_fech_env_afip','estado_simi')" \
-                            "and vil.processinstanceid in (" + lp + ") "\
-                            "order by vil.processinstanceid, variableId;"
-
-            cursorJbpm.execute(query_string3)
-            data3 = cursorJbpm.fetchall()
-
-            lp = ''
-
-            for index1 in range(len(data1)):
-                eleJson = {'process_instance_id': data1[index1][0],
-                           'task_id': data1[index1][1],
-                           'actions_available': data1[index1][2]}
-                for index3 in range(len(data3)):
-                    if data1[index1][0] == data3[index3][0]:
-                        if data3[index3][1] == 'grp':
-                            groups = self.grpMap[data3[index3][2]]
-                            eleJson['escale_to'] = groups
-                            eleJson[data3[index3][1]] = data3[index3][2]
-                        else:
-                            eleJson[data3[index3][1]] = data3[index3][2]
-                    else:
-                        continue
-
-                cursorSimi = dbSimi.cursor()
-
-                # Se unifican querys en una sola vista para traer datos, a su vez se agregan datos.
-                query_string2 = "SELECT porcentaje_procesado_lna, porcentaje_indicador_anio_actual_lna, "\
-                                "total_importado_anio_anterior_lna, tiene_acuerdo_exp_imp_lna, "\
-                                "monto_acuerdo_exp_imp_lna, porcentaje_indicador_anio_actual_lna "\
-                                "FROM  Importadores im "\
-                                "WHERE im.id_persona = %s; "
-
-                cursorSimi.execute(query_string2, eleJson['djai_cuit_imp'])
-                data2 = cursorSimi.fetchone()
-
-                cursorBlob = dbSimi.cursor()
-
-                query_string3 = "SELECT anexo_lna1 " \
-                                "FROM  acuerdo_anexos aa " \
-                                "WHERE aa.djai = %s; "
-
-                cursorBlob.execute(query_string3, eleJson['djai_id_simi'])
-                dataBlob = cursorBlob.fetchone()
-
-                if data2 == None:
-                    data2 = [0, 0, 0]
-
-                if dataBlob == None:
-                    dataBlob = [0]
-
-                eleJson['impor_porc_lna'] = str(data2[0])
-                eleJson['impor_porc_actual_lna'] = str(data2[1])
-                eleJson['impor_impor_ant_lna'] = str(data2[2])
-                eleJson['impor_tiene_acuerdo_exp_imp_lna'] = data2[3]
-                eleJson['impor_monto_acuerdo_exp_imp_lna'] = str(data2[4])
-                eleJson['impor_porcentaje_indicador_anio_actual_lna'] = str(data2[5])
-                eleJson['anexo_lna_1'] = dataBlob[0]
-                # if dataBlob != 0:
-                #     print dataBlob[0]
-
-                # Hacer una lista de jsons con los detalles.
-                dataJson2.append(eleJson)
-
-            # print dataJson2
-            return dataJson2
-
-        except Exception as e:
-            app.logger.error('ERROR: ' + str(e) + '.')
-            return {'error': str(e)}
-
-        finally:
-            dbJbpm.close()
-            dbSimi.close()
-
-    def fetch_simis_2(self, lista):
         dataJson2 = []
         dbSimi = mysql.connect()
         # DB JBPM
@@ -365,6 +263,8 @@ class ListaSimis(Resource):
                                         ",id_actividad                        "\
                                         ",desc_actividad                      "\
                                         ",acuerdo_cargado                     "\
+                                        ",tiene_acuerdo_automatico            "\
+                                        ",tiene_rump                          "\
                                    "FROM simidb.simi_cabecera "\
                                    "WHERE destinacion = %s"
 
@@ -386,7 +286,7 @@ class ListaSimis(Resource):
 
                 query_DetailView = "SELECT " \
                                     "destinacion					" \
-                                    ",estado 		                " \
+                                    ",estado_gestion                " \
                                     ",numero_item                   " \
                                     ",numero_subitem                " \
                                     ",descripcion_mercaderia        " \
@@ -406,6 +306,7 @@ class ListaSimis(Resource):
                                     ",unidad_estadistica            " \
                                     ",peso_neto_kg					" \
                                     ",precio_unitario_subitem		" \
+                                    ",lna                   		" \
                                    "FROM simidb.v_simi_detalle " \
                                    "WHERE destinacion = %s"
 
@@ -448,11 +349,12 @@ class Query(Resource):
     def get(self):
         self.args = request.args
         parser = reqparse.RequestParser()
-
+        parser.add_argument('accion', type=unicode)
         parser.add_argument('simis', type=unicode)
         parser.add_argument('pa', type=unicode)
         parser.add_argument('cuit', type=unicode)
         parser.add_argument('rz', type=unicode)
+        parser.add_argument('dates', type=unicode)
 
         rargs = parser.parse_args()
         listaIdSImis = self.listaIdSimis(rargs)
@@ -462,42 +364,86 @@ class Query(Resource):
 
         return resultado
 
-    def listaIdSimis(self, rargs):
+    def addDestinacion(self, value):
+        listPa = str(value).splitlines()
+        value = ','.join(unicode("\"" + e + "\"") for e in listPa)
+        return "destinacion IN (" + value + ")"
 
+    def addDjai(self,value):
+        if value == ' ':
+            return "estado_djai IS NULL"
+        if value == 'T':
+            return ""
+        else:
+            return "estado_djai IN (\""+value+"\")"
+
+    def addCuit(self, value):
+        return "cuit_importador IN (\"" + value + "\")"
+
+    def addRazon(self,value):
+        return "razon_social_importador IN (\"" + value + "\")"
+
+    def addPA(self,value):
+        listPa = str(value).splitlines()
+        lengthPA = len(listPa[0])
+        value = ','.join(unicode("\"" + e + "\"") for e in listPa)
+
+        if lengthPA == -1:
+            lengthPA = len(value)
+        return "SUBSTRING(posicion_arancelaria,1,"+str(lengthPA)+") IN (" + value + ")"
+
+    def addDates(self, value):
+        field_db = {
+            "dRec":"fecha_ofic",
+            "dCad":"fecha_caducidad",
+            "dInt":"fecha_ultima_modificacion"
+        }
+
+        clause = "";
+        if value:
+            listDates = json.loads(value);
+            for arg in listDates:
+                    if str(arg).lower().find("ini") != -1:
+                        clause += field_db[str(arg)[:4]] + " > \"" + listDates[arg] + "\" AND ";
+                    if str(arg).lower().find("fin") != -1:
+                        clause += field_db[str(arg)[:4]] + " < \"" + listDates[arg] + "\" AND ";
+            if (clause): clause = clause[:-5];
+        return clause;
+
+    def getFilter(self, keyArg, valueArg):
+        fieldsToFind = {
+            'simis': self.addDestinacion,
+            'accion': self.addDjai,
+            'cuit': self.addCuit,
+            'rz': self.addRazon,
+            'pa': self.addPA,
+            'dates': self.addDates
+        }
+
+        return fieldsToFind[keyArg](valueArg)
+
+    def listaIdSimis(self, rargs):
         #DB SIMI
         dbSimi = mysql.connect()
         cursor = dbSimi.cursor()
-        flag = False
         regs = ''
         listaIdSimis = {}
-
+        whereClause = ""
+        filterClause = ""
         try:
             query_string = "SELECT DISTINCT destinacion " \
-                           "FROM simi_pa " \
+                           "FROM v_campos_busqueda " \
 
-            if rargs['simis'] and rargs['simis'] != 'undefined':
-                flag = True
-                query_string += "WHERE destinacion IN (" + rargs['simis'] + ")"
+            for arg in rargs:
+                if rargs[arg] is not None and rargs[arg] != 'undefined':
+                    filterClause = self.getFilter(arg, rargs[arg])
+                    if filterClause != "":
+                        if whereClause == "":
+                            whereClause = "WHERE " + filterClause
+                        else:
+                            whereClause = whereClause + " AND " + filterClause
 
-            if rargs['pa'] and flag and rargs['pa'] and rargs['pa'] != 'undefined':
-                query_string += "AND posicion_arancelaria IN (" + rargs['pa'] + ")"
-
-            if rargs['pa'] and not flag and rargs['pa'] != 'undefined':
-                flag = True
-                query_string += "WHERE posicion_arancelaria IN (" + rargs['pa'] + ")"
-
-            if rargs['cuit'] and flag and rargs['cuit'] != 'undefined':
-                query_string += "AND cuit IN (" + rargs['cuit'] + ")"
-
-            if rargs['cuit'] and not flag and rargs['cuit'] != 'undefined':
-                flag = True
-                query_string += "WHERE cuit IN (" + rargs['cuit'] + ")"
-
-            if rargs['rz'] and flag and rargs['rz'] != 'undefined':
-                query_string += "AND razon_social IN (" + rargs['rz'] + ")"
-
-            if rargs['rz'] and not flag and rargs['rz'] != 'undefined':
-                query_string += "WHERE razon_social IN (" + rargs['rz'] + ")"
+            query_string = query_string + whereClause
 
             cursor.execute(query_string)
             data = cursor.fetchall()
@@ -513,7 +459,6 @@ class Query(Resource):
         except Exception as e:
             app.logger.error('ERROR: ' + str(e) + '.')
             return {'error': str(e)}
-
         finally:
             dbSimi.close()
 
@@ -541,7 +486,7 @@ class Query(Resource):
             app.logger.error('ERR: ' + str(r.status_code) + '.')
 
         resultado = busqueda.fetch_simis(lSimis)
-        print resultado
+
         return resultado
 
 
