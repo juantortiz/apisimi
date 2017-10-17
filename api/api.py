@@ -195,12 +195,14 @@ class ListaSimis(Resource):
 
     def fetch_simis(self, lista):
         dataJson2 = []
-        dbSimi = mysql.connect()
-        # DB JBPM
         print "Paso por aca"
+        dbSimi = mysql.connect()
+        print "Paso por aca 2"
+        # DB JBPM
+
         dbJbpm = MySQLdb.connect(host=dbhost, user=dbuser, passwd=dbpass, db=db)
         cursorJbpm = dbJbpm.cursor()
-        print "Paso por aca 2"
+
         try:
             lp = ''
             query_string1 = "SELECT tvi1.processinstanceid, tvi1.taskId, tvi1.value as actions_available "\
