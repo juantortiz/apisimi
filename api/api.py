@@ -36,7 +36,7 @@ def init_config(configFile):
     global urlAPITaskSearch
     global usrAPI
     global passAPI
-
+    print "hola"
     app.config['MYSQL_DATABASE_USER'] = config.get('DBSIMI', 'dbusername')
     app.config['MYSQL_DATABASE_PASSWORD'] = config.get('DBSIMI', 'dbpassword')
     app.config['MYSQL_DATABASE_DB'] = config.get('DBSIMI', 'db')
