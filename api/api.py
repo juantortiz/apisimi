@@ -1,4 +1,4 @@
-# import json
+import json
 import datetime
 import decimal
 import logging
@@ -36,7 +36,7 @@ def init_config(configFile):
     global urlAPITaskSearch
     global usrAPI
     global passAPI
-    print "hola"
+
     app.config['MYSQL_DATABASE_USER'] = config.get('DBSIMI', 'dbusername')
     app.config['MYSQL_DATABASE_PASSWORD'] = config.get('DBSIMI', 'dbpassword')
     app.config['MYSQL_DATABASE_DB'] = config.get('DBSIMI', 'db')
@@ -402,8 +402,7 @@ class Query(Resource):
 
         clause = "";
         if value:
-            # listDates = json.loads(value);
-            listDates = {};
+            listDates = json.loads(value);
             for arg in listDates:
                     if str(arg).lower().find("ini") != -1:
                         clause += field_db[str(arg)[:4]] + " > \"" + listDates[arg] + "\" AND ";
