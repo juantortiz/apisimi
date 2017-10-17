@@ -38,13 +38,9 @@ def init_config(configFile):
     global passAPI
 
     app.config['MYSQL_DATABASE_USER'] = config.get('DBSIMI', 'dbusername')
-    print app.config['MYSQL_DATABASE_USER']
     app.config['MYSQL_DATABASE_PASSWORD'] = config.get('DBSIMI', 'dbpassword')
-    print app.config['MYSQL_DATABASE_PASSWORD']
     app.config['MYSQL_DATABASE_DB'] = config.get('DBSIMI', 'db')
-    print app.config['MYSQL_DATABASE_DB']
     app.config['MYSQL_DATABASE_HOST'] = config.get('DBSIMI', 'dbhost')
-    print app.config['MYSQL_DATABASE_HOST']
     dbuser = config.get('DB', 'dbusername')
     dbpass = config.get('DB', 'dbpassword')
     db = config.get('DB', 'db')
@@ -195,14 +191,10 @@ class ListaSimis(Resource):
 
     def fetch_simis(self, lista):
         dataJson2 = []
-        print "Paso por aca"
         dbSimi = mysql.connect()
-        print "Paso por aca 2"
         # DB JBPM
-
         dbJbpm = MySQLdb.connect(host=dbhost, user=dbuser, passwd=dbpass, db=db)
         cursorJbpm = dbJbpm.cursor()
-
         try:
             lp = ''
             query_string1 = "SELECT tvi1.processinstanceid, tvi1.taskId, tvi1.value as actions_available "\
