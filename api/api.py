@@ -55,6 +55,8 @@ def init_config(configFile):
 class ImportadorPaOcho(Resource):
 
     def get(self):
+        con_simidb = mysql.connect()
+
         try:
             parser = reqparse.RequestParser()
             parser.add_argument('cuit', type=unicode, required=True)
