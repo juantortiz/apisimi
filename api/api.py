@@ -52,6 +52,51 @@ def init_config(configFile):
     usrAPI = config.get('GLOBAL', 'usrAPI')
     passAPI = config.get('GLOBAL', 'passAPI')
 
+class ImportadorRobot(Resource):
+
+    def get(self):
+        con_simidb = mysql.connect()
+
+        try:
+            parser = reqparse.RequestParser()
+            parser.add_argument('cuit', type=unicode, required=True)
+            rargs = parser.parse_args()
+            cuit_arg = rargs['cuit']
+
+            con_simidb = mysql.connect()
+            cursor_robot = con_simidb.cursor()
+            query_importador = "select " \
+                               "posicion_arancelaria," \
+                               "fob_cantidad," \
+                               "unidad_medida," \
+                               "factor_lineal," \
+                               "fecha," \
+                               "from acuerdo_pa " \
+                               "where cuit = %s ";
+
+            cursor_robot.execute(query_importador, cuit_arg)
+            cuits_pa = cursor_robot.fetchall()
+            cuit_pa_fields = cursor_robot.description
+            cursor_robot.close()
+            cuit_pa_list = []
+            for cuit in cuits_pa:
+                cuit_send = {}
+                for (idx, fieldcuit) in enumerate(cuit_pa_fields):
+                    if (isinstance(cuit[idx], decimal.Decimal) or isinstance(cuit[idx], datetime.datetime)):
+                        cuit_send[(cuit_pa_fields[idx][0])] = str(cuit[idx])
+                    else:
+                        cuit_send[(cuit_pa_fields[idx][0])] = cuit[idx]
+                cuit_pa_list.append(cuit_send)
+            return cuit_pa_list
+
+        except Exception as e:
+            app.logger.error('ERROR: ' + str(e) + '.')
+            return {'error': str(e)}
+
+        finally:
+            con_simidb.close()
+
+
 class ImportadorPaOcho(Resource):
 
     def get(self):
@@ -584,6 +629,8 @@ api.add_resource(ListaSimis, '/ListaSimis')
 api.add_resource(Query, '/Query')
 api.add_resource(ImportadorPaOcho, '/ImportadorPaOcho')
 api.add_resource(ImportadorPaDoce, '/ImportadorPaDoce')
+api.add_resource(ImportadorRobot, '/ImportadorRobot')
+
 
 
 def params_to_string(params):
