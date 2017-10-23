@@ -70,7 +70,7 @@ class ImportadorRobot(Resource):
                                "fob_cantidad," \
                                "unidad_medida," \
                                "factor_lineal," \
-                               "fecha," \
+                               "fecha " \
                                "from acuerdo_pa " \
                                "where cuit = %s ";
 
