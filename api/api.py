@@ -261,6 +261,117 @@ class Importador(Resource):
             conn.close()
 
 
+class ListaSimisPorCuit(Resource):
+
+    def get(self):
+        con_simidb = mysql.connect()
+
+        try:
+            parser = reqparse.RequestParser()
+            parser.add_argument('cuit', type=unicode, required=True)
+            rargs = parser.parse_args()
+            cuit_arg = rargs['cuit']
+
+            cursor_historico = con_simidb.cursor()
+            query_historico = "SELECT"\
+                              "     dj.destinacion,"\
+                              "     dj.estado,"\
+                              "     dj.fecha_ofic,"\
+                              "     dj.fecha_caducidad,"\
+                              "     dj.fecha_envio_afip,"\
+                              "     dj.fecha_envio_afip_motivo_observacion,"\
+                              "     dj.fob_dolares_disponible,"\
+                              "     dj.fob_dolares_lna_disponible,"\
+                              "     dj.fecha_anulacion,"\
+                              "     dj.motivo_bloqueo,"\
+                              "     dj.fecha_salidas,"\
+                              "     dj.cudap,"\
+                              "     imp.monto_acuerdo_exp_imp_lna,"\
+                              "     imp.porcentaje_indicador_anio_actual_lna,"\
+                              "     imp.tiene_acuerdo_exp_imp_lna,"\
+                              "     imp.acumulado_procesado_lna,"\
+                              "     imp.id_actividad,"\
+                              "     imp.desc_actividad,"\
+                              "     (CASE WHEN (ac.djai IS NOT NULL) THEN 'S' ELSE 'N' END) AS acuerdo_cargado,"\
+                              "     (CASE WHEN (re.CUIT_CUIL IS NOT NULL) THEN 'S' ELSE 'N' END) AS tiene_acuerdo_automatico,"\
+                              "     (CASE WHEN (ap.cuit IS NOT NULL) THEN 'S' ELSE 'N' END) AS tiene_rump"\
+                              " FROM djais_hist AS dj"\
+	                          "    JOIN Importadores AS imp ON (dj.cuit_importador = imp.id_persona)"\
+	                          "    LEFT JOIN acuerdo_anexos as ac ON (dj.destinacion = ac.djai)"\
+	                          "    LEFT JOIN (select ap.cuit from acuerdo_pa as ap group by ap.cuit) ap ON (dj.cuit_importador = ap.cuit)"\
+	                          "    LEFT JOIN (select re.CUIT_CUIL from rump_cuits as re group by re.CUIT_CUIL) re ON (dj.cuit_importador = re.CUIT_CUIL)"\
+                              " WHERE dj.cuit_importador = %s";
+
+            cursor_historico.execute(query_historico, cuit_arg)
+            cuits_pa = cursor_historico.fetchall()
+            cuit_pa_fields = cursor_historico.description
+            cursor_historico.close()
+            cuit_pa_list = []
+
+            for cuit in cuits_pa:
+                cuit_send = {}
+                for (idx, fieldcuit) in enumerate(cuit_pa_fields):
+                    if (isinstance(cuit[idx], decimal.Decimal) or isinstance(cuit[idx], datetime.datetime)):
+                        cuit_send["h_"+(cuit_pa_fields[idx][0])] = str(cuit[idx])
+                    else:
+                        cuit_send["h_"+(cuit_pa_fields[idx][0])] = cuit[idx]
+
+                cursorSimi_Detail = con_simidb.cursor()
+                query_DetailView ="SELECT a1.destinacion AS destinacion,"\
+                                "         a1.estado_gestion AS estado_gestion,"\
+                                "	 	  a1.numero_item AS numero_item,"\
+                                "		  a1.numero_subitem AS numero_subitem,"\
+                                "	      a1.descripcion_mercaderia AS descripcion_mercaderia,"\
+                                "	      a1.posicion_arancelaria AS posicion_arancelaria,"\
+                                "	      pr.codigo_posicion_arancelaria AS codigo_posicion_arancelaria,"\
+                                "	      a1.fob_dolares AS fob_dolares,"\
+                                "	      a1.fob_dolares_subitem AS fob_dolares_subitem,"\
+                                "	      a1.cantidad_unidades_declarada AS cantidad_unidades_declarada,"\
+                                "	      a1.pais_procedencia AS pais_procedencia,"\
+                                "	      a1.pais_origen AS pais_origen,"\
+                                "	      a1.descripcion_moneda_fob AS descripcion_moneda_fob,"\
+                                "	      a1.fecha_embarque_item AS fecha_embarque_item,"\
+                                "	      a1.fecha_arribo_item AS fecha_arribo_item,"\
+                                "	      a1.fecha_ultima_modificacion AS fecha_ultima_modificacion,"\
+                                "	      a1.marca_subitem AS marca_subitem,"\
+                                "	      a1.modelo_subitem AS modelo_subitem,"\
+                                "	      a1.descripcion_unidad_medida AS descripcion_unidad_medida,"\
+                                "	      a1.unidad_estadistica AS unidad_estadistica,"\
+                                "	      a1.peso_neto_kg AS peso_neto_kg,"\
+                                "	      a1.precio_unitario_subitem AS precio_unitario_subitem,"\
+                                "	      a1.lna AS lna"\
+                                " FROM a1dest_hist a1"\
+                                "      LEFT JOIN posiciones_res pr ON a1.posicion_arancelaria = CONVERT(pr.codigo_posicion_arancelaria USING utf8)"\
+                                "      JOIN djais_hist dj ON dj.destinacion = a1.destinacion"\
+                                " WHERE a1.destinacion = %s"\
+
+                cursorSimi_Detail.execute(query_DetailView, cuit_send["h_destinacion"])
+                simiDetails = cursorSimi_Detail.fetchall()
+                fieldsDetail = cursorSimi_Detail.description
+                detailList = []
+                cursorSimi_Detail.close()
+
+                for simi_Detail in simiDetails:
+                    detailSimi = {}
+                    for (idx_d, fieldSimiDetail) in enumerate(simi_Detail):
+                        if (isinstance(fieldSimiDetail, decimal.Decimal) or isinstance(fieldSimiDetail,datetime.datetime)):
+                            detailSimi['d_' + (fieldsDetail[idx_d][0])] = str(fieldSimiDetail)
+                        else:
+                            detailSimi['d_' + (fieldsDetail[idx_d][0])] = fieldSimiDetail
+                    detailList.append(detailSimi)
+
+                cuit_send["listSimiDetails"] = detailList
+                cuit_pa_list.append(cuit_send)
+            return cuit_pa_list
+
+        except Exception as e:
+            app.logger.error('ERROR: ' + str(e) + '.')
+            return {'error': str(e)}
+
+        finally:
+            con_simidb.close()
+
+
 class ListaSimis(Resource):
 
     def __init__(self):
@@ -630,6 +741,7 @@ api.add_resource(Query, '/Query')
 api.add_resource(ImportadorPaOcho, '/ImportadorPaOcho')
 api.add_resource(ImportadorPaDoce, '/ImportadorPaDoce')
 api.add_resource(ImportadorRobot, '/ImportadorRobot')
+api.add_resource(ListaSimisPorCuit, '/ListaSimisPorCuit')
 
 
 
