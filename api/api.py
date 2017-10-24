@@ -275,7 +275,8 @@ class ListaSimisPorCuit(Resource):
             cursor_historico = con_simidb.cursor()
             query_historico = "SELECT"\
                               "     dj.destinacion,"\
-                              "     dj.estado,"\
+                              "     dj.estado," \
+                              "     dj.estado_djai," \
                               "     dj.fecha_ofic,"\
                               "     dj.fecha_caducidad,"\
                               "     dj.fecha_envio_afip,"\
