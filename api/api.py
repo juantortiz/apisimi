@@ -286,7 +286,10 @@ class ListaSimisPorCuit(Resource):
                               "     dj.fecha_anulacion,"\
                               "     dj.motivo_bloqueo,"\
                               "     dj.fecha_salidas,"\
-                              "     dj.cudap,"\
+                              "     dj.cudap," \
+                              "     dj.cuit_importador," \
+                              "     dj.razon_social_importador," \
+                              "     dj.fob_dolares_bi34," \
                               "     imp.monto_acuerdo_exp_imp_lna,"\
                               "     imp.porcentaje_indicador_anio_actual_lna,"\
                               "     imp.tiene_acuerdo_exp_imp_lna,"\
