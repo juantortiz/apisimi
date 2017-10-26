@@ -607,9 +607,7 @@ class Query(Resource):
 
         rargs = parser.parse_args()
         listaIdSImis = self.listaIdSimis(rargs)
-
-        listaTasks = params_to_string(listaIdSImis)
-        resultado = self.do_request(listaTasks)
+        resultado = self.do_request(listaIdSImis)
 
         return resultado
 
@@ -677,6 +675,7 @@ class Query(Resource):
         cursor = dbSimi.cursor()
         regs = ''
         listaIdSimis = {}
+        listTemp = []
         whereClause = ""
         filterClause = ""
         try:
@@ -697,11 +696,9 @@ class Query(Resource):
             cursor.execute(query_string)
             data = cursor.fetchall()
 
-            for index in range(len(data)):
-                reg = str(data[index][0]) + ','
-                regs = regs + reg
-            listaIdSimis['id_simis'] = regs[:-1]
-            print listaIdSimis
+            for i in range(len(data)):
+                listTemp.append(data[i][0])
+            listaIdSimis["vv"] = listTemp
 
             return listaIdSimis
 
@@ -711,13 +708,13 @@ class Query(Resource):
         finally:
             dbSimi.close()
 
-    def do_request(self, params):
+    def do_request(self, simis):
         busqueda = ListaSimis()
-        url = (urlAPITaskSearch + params)
+        url = (urlAPITaskSearch)
         headers = {'Accept': 'application/json'}
         basic = request.authorization
         auth = HTTPBasicAuth(basic.username, basic.password)
-        r = requests.get(url, auth=auth, headers=headers)
+        r = requests.get(url, params=simis, auth=auth, headers=headers)
         data = r.json()
         print data
 
@@ -746,16 +743,6 @@ api.add_resource(ImportadorPaOcho, '/ImportadorPaOcho')
 api.add_resource(ImportadorPaDoce, '/ImportadorPaDoce')
 api.add_resource(ImportadorRobot, '/ImportadorRobot')
 api.add_resource(ListaSimisPorCuit, '/ListaSimisPorCuit')
-
-
-
-def params_to_string(params):
-    query_params = ''
-    for key in params.keys():
-        values = params.get(key).split(',')
-        for value in values:
-            query_params += '&vv=' + value
-    return query_params
 
 
 if len(sys.argv) == 2:
