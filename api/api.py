@@ -386,12 +386,12 @@ class ListaSimis(Resource):
             grupos = analistas[:]
             grupos.pop(grupos.index(grp))
             self.grpMap[grp] = grupos
-            self.grpMap[grp].append('aprobador_'+grp)
+            # //self.grpMap[grp].append('aprobador_'+grp)
         for grp in aprobadores:
             grupos = aprobadores[:]
             grupos.pop(grupos.index(grp))
             self.grpMap[grp] = grupos
-            self.grpMap[grp].append('supervisor')
+            # self.grpMap[grp].append('supervisor')
         self.grpMap['supervisor'] = ['director_importacion']
         self.grpMap['director_importacion'] = ['director_nacional']
         self.grpMap['director_nacional'] = []
