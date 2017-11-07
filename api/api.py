@@ -628,7 +628,7 @@ class Query(Resource):
         return "cuit_importador IN (\"" + value + "\")"
 
     def addRazon(self,value):
-        return "razon_social_importador IN (\"" + value + "\")"
+        return "razon_social_importador LIKE \"%" + value + "%\""
 
     def addPA(self,value):
         listPa = str(value).splitlines()
