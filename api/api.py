@@ -65,14 +65,19 @@ class ImportadorRobot(Resource):
 
             con_simidb = mysql.connect()
             cursor_robot = con_simidb.cursor()
-            query_importador = "select " \
-                               "posicion_arancelaria," \
-                               "fob_cantidad," \
-                               "unidad_medida," \
-                               "factor_lineal," \
-                               "fecha " \
-                               "from acuerdo_pa " \
-                               "where cuit = %s ";
+
+            query_importador = "SELECT " \
+                                  "posicion_arancelaria, " \
+                                  "fob_cantidad, " \
+                                  "unidad_medida, " \
+                                  "factor_lineal, " \
+                                  "tope_fob, " \
+                                  "cantidad, " \
+                                  "cantidad_disponible, " \
+                                  "unidad_declarada, " \
+                                  "libre_acuerdo_cantidad " \
+                               "FROM acuerdo_importado_posicion " \
+                               "WHERE cuit = %s ";
 
             cursor_robot.execute(query_importador, cuit_arg)
             cuits_pa = cursor_robot.fetchall()
@@ -160,13 +165,17 @@ class ImportadorPaDoce(Resource):
             con_simidb = mysql.connect()
             cursor_import_doce = con_simidb.cursor()
 
-            query_importador = "select " \
-                               "a1.posicion_arancelaria AS posicion_arancelaria" \
-                               ",sum(a1.fob_dolares_subitem) AS fob_dolares_sum " \
-                               "from a1dest_hist a1 " \
-                               "where a1.cuit_importador = %s " \
-                               "group by a1.cuit_importador,a1.posicion_arancelaria " \
-                               "order by a1.cuit_importador,a1.posicion_arancelaria;";
+            query_importador = "SELECT " \
+                                  "posicion_arancelaria " \
+                                  ",unidad_declarada " \
+                                  ",cantidad " \
+                                  ",fob_dolares " \
+                                  ",kilos " \
+                                  ",cantidad_disponible " \
+                                  ",fob_dolares_disponible " \
+                               "FROM importado_por_posicion_arancelaria  " \
+                               "WHERE cuit = %s " \
+                               "ORDER BY posicion_arancelaria;";
 
             cursor_import_doce.execute(query_importador, cuit_arg)
             cuits_pa = cursor_import_doce.fetchall()
