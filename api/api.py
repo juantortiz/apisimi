@@ -110,13 +110,18 @@ class ImportadorPaOcho(Resource):
 
             con_simidb = mysql.connect()
             cursor_import_ocho = con_simidb.cursor()
-            query_importador = "select " \
-                               "substr(a1.posicion_arancelaria,1,10) AS posicion_arancelaria" \
-                               ",sum(a1.fob_dolares_subitem) AS fob_dolares_sum " \
-                               "from a1dest_hist a1 " \
-                               "where a1.cuit_importador = %s " \
-                               "group by a1.cuit_importador,a1.posicion_arancelaria " \
-                               "order by a1.cuit_importador,a1.posicion_arancelaria;";
+
+            query_importador = "SELECT " \
+                                  "Subpartida" \
+                                  ",unidad_declarada " \
+                                  ",cantidad " \
+                                  ",fob_dolares " \
+                                  ",kilos " \
+                                  ",cantidad_disponible " \
+                                  ",fob_dolares_disponible " \
+                               "FROM importado_por_subpartida " \
+                               "WHERE cuit = %s " \
+                               "ORDER BY Subpartida;";
 
             cursor_import_ocho.execute(query_importador, cuit_arg)
             cuits_pa = cursor_import_ocho.fetchall()
@@ -386,12 +391,12 @@ class ListaSimis(Resource):
             grupos = analistas[:]
             grupos.pop(grupos.index(grp))
             self.grpMap[grp] = grupos
-            self.grpMap[grp].append('aprobador_'+grp)
+            # //self.grpMap[grp].append('aprobador_'+grp)
         for grp in aprobadores:
             grupos = aprobadores[:]
             grupos.pop(grupos.index(grp))
             self.grpMap[grp] = grupos
-            self.grpMap[grp].append('supervisor')
+            # self.grpMap[grp].append('supervisor')
         self.grpMap['supervisor'] = ['director_importacion']
         self.grpMap['director_importacion'] = ['director_nacional']
         self.grpMap['director_nacional'] = []
@@ -628,7 +633,7 @@ class Query(Resource):
         return "cuit_importador IN (\"" + value + "\")"
 
     def addRazon(self,value):
-        return "razon_social_importador IN (\"" + value + "\")"
+        return "razon_social_importador LIKE \"%" + value + "%\""
 
     def addPA(self,value):
         listPa = str(value).splitlines()
