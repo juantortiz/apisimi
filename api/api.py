@@ -211,62 +211,40 @@ class Importador(Resource):
 
             cuit_id = rargs['cuit_id']
 
-            cursor = conn.cursor()
+            cursorImp = conn.cursor()
 
-            query_string = "SELECT id_actividad, desc_actividad, mail, area, telefono, acumulado_solicitado, " \
-                           "acumulado_solicitado_lna, " \
-                           "acumulado_autorizado, porcentaje_autorizado, acumulado_autorizado_lna," \
-                           "porcentaje_autorizado_lna, acumulado_observado, porcentaje_observado," \
-                           "acumulado_observado_lna, porcentaje_observado_lna, acumulado_procesado_lna," \
-                           "porcentaje_procesado_lna, total_importado_anio_anterior, " \
-                           "total_importado_anio_anterior_lna, porcentaje_indicador_anio_actual_lna, " \
-                           "monto_referencia_anio_anterior, porcentaje_indicador_anio_actual," \
-                           "acumulado_fob_dolares_disponible_sali, acumulado_fob_dolares_disponible_sali_lna, " \
-                           "desc_actividad, acumulado_procesado, monto_referencia_anio_anterior_lna," \
-                           "monto_acuerdo_exp_imp, monto_acuerdo_exp_imp_lna " \
-                           "FROM  Importadores im " \
-                           "WHERE im.id_persona = %s;"
-
-            cursor.execute(query_string, cuit_id)
-            data = cursor.fetchone()
-
-            dataJson = {
-                    "imp_id_actividad": data[0],
-                    "imp_estado_djai": data[1],
-                    "imp_mail": data[2],
-                    "imp_area": data[3],
-                    "imp_telefono": data[4],
-                    "imp_acumulado_solicitado": data[5],
-                    "imp_acumulado_solicitado_lna": data[6],
-                    "imp_acumulado_autorizado": data[7],
-                    "imp_porcentaje_autorizado": data[8],
-                    "imp_acumulado_autorizado_lna": data[9],
-                    "imp_porcentaje_autorizado_lna": data[10],
-                    "imp_acumulado_observado": data[11],
-                    "imp_porcentaje_observado": data[12],
-                    "imp_acumulado_observado_lna": data[13],
-                    "imp_porcentaje_observado_lna": data[14],
-                    "imp_acumulado_procesado_lna": data[15],
-                    "imp_porcentaje_procesado_lna": data[16],
-                    "imp_total_importado_anio_anterior": data[17],
-                    "imp_total_importado_anio_anterior_lna": data[18],
-                    "imp_porcentaje_indicador_anio_actual_lna": data[19],
-                    "imp_monto_referencia_anio_anterior": data[20],
-                    "imp_porcentaje_indicador_anio_actual": data[21],
-                    "imp_acumulado_fob_dolares_disponible_sali": data[22],
-                    "imp_acumulado_fob_dolares_disponible_sali_lna": data[23],
-                    "imp_descripcion_actividad": data[24],
-                    "imp_acumulado_procesado": data[25],
-                    "imp_monto_referencia_anio_anterior_lna": data[26],
-                    "imp_monto_acuerdo_exp_imp": data[27],
-                    "imp_monto_acuerdo_exp_imp_lna": data[28]
-            }
-
-            for keyImp in dataJson.keys():
-                if (isinstance(dataJson[keyImp], decimal.Decimal) or isinstance(dataJson[keyImp], datetime.datetime)):
-                    dataJson[keyImp] = str(dataJson[keyImp])
+            queryImportador = "SELECT " \
+                                "acumulado_solicitado, " \
+                                "acumulado_solicitado_lna, " \
+                                "acumulado_autorizado, " \
+                                "acumulado_autorizado_lna, " \
+                                "acumulado_observado, " \
+                                "acumulado_observado_lna, " \
+                                "total_importado_anio_anterior, " \
+                                "total_importado_anio_anterior_lna, " \
+                                "tiene_acuerdo_exp_imp_lna, " \
+                                "monto_acuerdo_exp_imp_lna, " \
+                                "acumulado_autorizado_lna, " \
+                                "monto_acuerdo_exp_imp_lna, " \
+                                "acumulado_autorizado_lna, " \
+                                "total_importado_anio_anterior_lna, " \
+                                "importado_acum_lna_anio_anterior " \
+                            "FROM  Importadores " \
+                            "WHERE id_persona = %s;";
 
 
+            cursorImp.execute(queryImportador, cuit_id)
+            dataImportador = cursorImp.fetchone()
+            fieldsHeader = cursorImp.description
+            dataJson = {}
+
+            for (idx, fieldImp) in enumerate(dataImportador):
+                if (isinstance(fieldImp, decimal.Decimal) or isinstance(fieldImp, datetime.datetime)):
+                    dataJson[fieldsHeader[idx][0]] = str(fieldImp)
+                else:
+                    dataJson[fieldsHeader[idx][0]] = fieldImp
+
+            cursorImp.close()
             return dataJson
 
         except Exception as e:
