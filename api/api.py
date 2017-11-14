@@ -218,8 +218,12 @@ class Importador(Resource):
                                 "acumulado_solicitado_lna, " \
                                 "acumulado_autorizado, " \
                                 "acumulado_autorizado_lna, " \
+                                "porcentaje_autorizado, " \
+                                "porcentaje_autorizado_lna, " \
                                 "acumulado_observado, " \
                                 "acumulado_observado_lna, " \
+                                "porcentaje_observado, " \
+                                "porcentaje_observado_lna, " \
                                 "total_importado_anio_anterior, " \
                                 "total_importado_anio_anterior_lna, " \
                                 "tiene_acuerdo_exp_imp_lna, " \
