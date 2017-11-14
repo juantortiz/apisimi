@@ -232,7 +232,8 @@ class Importador(Resource):
                                 "monto_acuerdo_exp_imp_lna, " \
                                 "acumulado_autorizado_lna, " \
                                 "total_importado_anio_anterior_lna, " \
-                                "importado_acum_lna_anio_anterior " \
+                                "importado_acum_lna_anio_anterior, " \
+                                "porcentaje_indicador_anio_actual_lna " \
                             "FROM  Importadores " \
                             "WHERE id_persona = %s;";
 
