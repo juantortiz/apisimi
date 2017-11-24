@@ -232,7 +232,8 @@ class Importador(Resource):
                                 "monto_acuerdo_exp_imp_lna, " \
                                 "acumulado_autorizado_lna, " \
                                 "total_importado_anio_anterior_lna, " \
-                                "importado_acum_lna_anio_anterior " \
+                                "importado_acum_lna_anio_anterior, " \
+                                "porcentaje_indicador_anio_actual_lna " \
                             "FROM  Importadores " \
                             "WHERE id_persona = %s;";
 
@@ -531,28 +532,7 @@ class ListaSimis(Resource):
                 # Hacer una lista de jsons con los detalles.
 
                 query_DetailView = "SELECT " \
-                                    "destinacion					" \
-                                    ",estado_gestion                " \
-                                    ",numero_item                   " \
-                                    ",numero_subitem                " \
-                                    ",descripcion_mercaderia        " \
-                                    ",posicion_arancelaria          " \
-                                    ",fob_dolares                   " \
-                                    ",fob_dolares_subitem           " \
-                                    ",cantidad_unidades_declarada   " \
-                                    ",pais_procedencia              " \
-                                    ",pais_origen                   " \
-                                    ",descripcion_moneda_fob        " \
-                                    ",fecha_embarque_item           " \
-                                    ",fecha_arribo_item             " \
-                                    ",fecha_ultima_modificacion     " \
-                                    ",marca_subitem                 " \
-                                    ",modelo_subitem                " \
-                                    ",descripcion_unidad_medida     " \
-                                    ",unidad_estadistica            " \
-                                    ",peso_neto_kg					" \
-                                    ",precio_unitario_subitem		" \
-                                    ",lna                   		" \
+                                    "*" \
                                    "FROM simidb.v_simi_detalle " \
                                    "WHERE destinacion = %s"
 
