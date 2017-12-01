@@ -23,6 +23,7 @@ CORS(app)
 mysql = MySQL()
 mysql.init_app(app)
 
+
 def init_config(configFile):
     config = ConfigParser.ConfigParser()
     config.read(configFile)
@@ -51,6 +52,7 @@ def init_config(configFile):
     urlAPITaskSearch = config.get('GLOBAL', 'urlAPITaskSearch')
     usrAPI = config.get('GLOBAL', 'usrAPI')
     passAPI = config.get('GLOBAL', 'passAPI')
+
 
 class ImportadorRobot(Resource):
 
@@ -228,12 +230,9 @@ class Importador(Resource):
                                 "total_importado_anio_anterior_lna, " \
                                 "tiene_acuerdo_exp_imp_lna, " \
                                 "monto_acuerdo_exp_imp_lna, " \
-                                "acumulado_autorizado_lna, " \
-                                "monto_acuerdo_exp_imp_lna, " \
-                                "acumulado_autorizado_lna, " \
-                                "total_importado_anio_anterior_lna, " \
                                 "importado_acum_lna_anio_anterior, " \
-                                "porcentaje_indicador_anio_actual_lna " \
+                                "porcentaje_indicador_anio_actual_lna , " \
+                                "importado_acum_lna_anio_actual " \
                             "FROM  Importadores " \
                             "WHERE id_persona = %s;";
 
