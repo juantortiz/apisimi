@@ -509,7 +509,8 @@ class ListaSimis(Resource):
                                         ",desc_actividad                      "\
                                         ",acuerdo_cargado                     "\
                                         ",tiene_acuerdo_automatico            "\
-                                        ",tiene_rump                          "\
+                                        ",tiene_rump                          " \
+                                        ",cuit_inhibido                       " \
                                    "FROM simidb.simi_cabecera "\
                                    "WHERE destinacion = %s"
 
