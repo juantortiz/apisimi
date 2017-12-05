@@ -77,9 +77,9 @@ class ImportadorRobot(Resource):
                                   "cantidad, " \
                                   "cantidad_disponible, " \
                                   "unidad_declarada, " \
-                                  "libre_acuerdo_cantidad " \
-                                  "cantidad_autorizado_vigente " \
-                                  "fob_dolares_autorizado_vigente " \
+                                  "libre_acuerdo_cantidad, " \
+                                  "cantidad_autorizado_vigente, " \
+                                  "fob_dolares_autorizado_vigente, " \
                                "FROM acuerdo_importado_posicion " \
                                "WHERE cuit = %s ";
 
@@ -234,9 +234,9 @@ class Importador(Resource):
                                 "monto_acuerdo_exp_imp_lna, " \
                                 "importado_acum_lna_anio_anterior, " \
                                 "porcentaje_indicador_anio_actual_lna , " \
-                                "importado_acum_lna_anio_actual " \
-                                "monto_acuerdo_exp_imp " \
-                                "monto_referencia_anio_anterior " \
+                                "importado_acum_lna_anio_actual, " \
+                                "monto_acuerdo_exp_imp, " \
+                                "monto_referencia_anio_anterior, " \
                                 "monto_acuerdo_exp_lna " \
                             "FROM  Importadores " \
                             "WHERE id_persona = %s;";
