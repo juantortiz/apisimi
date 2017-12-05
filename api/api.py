@@ -237,7 +237,6 @@ class Importador(Resource):
                                 "importado_acum_lna_anio_actual, " \
                                 "monto_acuerdo_exp_imp, " \
                                 "monto_referencia_anio_anterior, " \
-                                "monto_acuerdo_exp_lna " \
                             "FROM  Importadores " \
                             "WHERE id_persona = %s;";
 
