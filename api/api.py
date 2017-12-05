@@ -79,7 +79,7 @@ class ImportadorRobot(Resource):
                                   "unidad_declarada, " \
                                   "libre_acuerdo_cantidad, " \
                                   "cantidad_autorizado_vigente, " \
-                                  "fob_dolares_autorizado_vigente, " \
+                                  "fob_dolares_autorizado_vigente " \
                                "FROM acuerdo_importado_posicion " \
                                "WHERE cuit = %s ";
 
