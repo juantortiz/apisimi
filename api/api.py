@@ -75,7 +75,9 @@ class ImportadorRobot(Resource):
                                   "cantidad, " \
                                   "cantidad_disponible, " \
                                   "unidad_declarada, " \
-                                  "libre_acuerdo_cantidad " \
+                                  "libre_acuerdo_cantidad, " \
+                                  "cantidad_autorizado_vigente, " \
+                                  "fob_dolares_autorizado_vigente " \
                                "FROM acuerdo_importado_posicion " \
                                "WHERE cuit = %s ";
 
@@ -230,7 +232,11 @@ class Importador(Resource):
                                 "monto_acuerdo_exp_imp_lna, " \
                                 "importado_acum_lna_anio_anterior, " \
                                 "porcentaje_indicador_anio_actual_lna , " \
-                                "importado_acum_lna_anio_actual " \
+                                "importado_acum_lna_anio_actual, " \
+                                "monto_acuerdo_exp_imp, " \
+                                "monto_referencia_anio_anterior, " \
+                                "acumulado_fob_dolares_disponible_sali, " \
+                                "acumulado_fob_dolares_disponible_sali_lna " \
                             "FROM  Importadores " \
                             "WHERE id_persona = %s;";
 
@@ -516,7 +522,8 @@ class ListaSimis(Resource):
                                         ",desc_actividad                      "\
                                         ",acuerdo_cargado                     "\
                                         ",tiene_acuerdo_automatico            "\
-                                        ",tiene_rump                          "\
+                                        ",tiene_rump                          " \
+                                        ",cuit_inhibido                       " \
                                    "FROM simidb.simi_cabecera "\
                                    "WHERE destinacion = %s"
 
