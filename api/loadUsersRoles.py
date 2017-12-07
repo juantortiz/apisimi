@@ -10,8 +10,8 @@ def init_config(configFile):
 
     escale_to = {
         "analista": "aprobador",
-        "aprobador": "supervisor",
-        "supervisor": "director_importacion",
+        "supervisor": "coordinador",
+        "coordinador": "director_importacion",
         "director_importacion":  "director_nacional",
         "director_nacional":""
     }
@@ -42,25 +42,25 @@ def get_rol(lsRols):
         return "director_nacional"
     if any("director_importacion" in elem for elem in lsRols):
         return "director_importacion"
-    if any("supervisor" in elem for elem in lsRols):
+    if any("coordinador" in elem for elem in lsRols):
+        return "coordinador"
+    if any("supervisor_" in entry for entry in lsRols):
         return "supervisor"
-    if any("aprobador_" in entry for entry in lsRols):
-        return "aprobador"
     else:
         return "analista"
 
 
 def get_groups_to_share(rol, lsGroups):
-    # analistas = ['grupo1','grupo2','grupo3','grupo4']
-    # aprobadores = ['supervisor_grupo1','supervisor_grupo2','supervisor_grupo3','supervisor_grupo4']
+    analistas = ['grupo1','grupo2','grupo3','grupo4']
+    aprobadores = ['supervisor_grupo1','supervisor_grupo2','supervisor_grupo3','supervisor_grupo4']
     to_share = []
-    analistas = ['Varios1', 'Varios2', 'Varios4', 'Textil', 'Automotriz']
-    aprobadores = ['aprobador_Varios1', 'aprobador_Varios2', 'aprobador_Varios3', 'aprobador_Varios4','aprobador_Textil', 'aprobador_Automotriz']
+    # analistas = ['Varios1', 'Varios2', 'Varios4', 'Textil', 'Automotriz']
+    # aprobadores = ['aprobador_Varios1', 'aprobador_Varios2', 'aprobador_Varios3', 'aprobador_Varios4','aprobador_Textil', 'aprobador_Automotriz']
 
     if rol == 'analista':
         to_share = filter(lambda a: a not in lsGroups, analistas)
 
-    if rol == 'aprobador':
+    if rol == 'supervisor':
         to_share = filter(lambda a: a not in lsGroups, aprobadores)
 
     return to_share
@@ -83,15 +83,11 @@ if __name__ == '__main__':
                     user = lsUserRol.pop(0)
                     rol = get_rol(lsUserRol)
                     groups_to_share = get_groups_to_share(rol,lsUserRol)
-
                                                      # user,rol,groups,groups_to_share,group_to_scale
                     add_user = ("INSERT INTO user_rol (user,rol,groups,groups_to_share,group_to_scale) VALUES (%s, %s, %s, %s, %s) "
                                 "ON DUPLICATE KEY UPDATE rol = VALUES(rol),groups=VALUES(groups),groups_to_share=VALUES(groups_to_share),group_to_scale = VALUES(group_to_scale)")
 
                     data_user = (user, rol, ','.join(lsUserRol), ','.join(groups_to_share), escale_to[rol])
                     do_insert_simidb(add_user,data_user)
-                    # print user,'--',rol,'--',','.join(lsUserRol),'--','TO_SHARE','--',','.join(groups_to_share),escale_to[rol]
-
-
     else:
         print "Falta parametro archivo de usuarios y de configuracion"
