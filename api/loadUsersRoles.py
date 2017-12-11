@@ -9,7 +9,7 @@ def init_config(configFile):
     global escale_to
 
     escale_to = {
-        "analista": "aprobador",
+        "analista": "supervisor",
         "supervisor": "coordinador",
         "coordinador": "director_importacion",
         "director_importacion":  "director_nacional",
