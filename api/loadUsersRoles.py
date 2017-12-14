@@ -86,11 +86,8 @@ if __name__ == '__main__':
                                                      # user,rol,groups,groups_to_share,group_to_scale
                     add_user = ("INSERT INTO user_rol (user,rol,groups,groups_to_share,group_to_scale) VALUES (%s, %s, %s, %s, %s) "
                                 "ON DUPLICATE KEY UPDATE rol = VALUES(rol),groups=VALUES(groups),groups_to_share=VALUES(groups_to_share),group_to_scale = VALUES(group_to_scale)")
-                    if (rol == "analista"):
-                        next_grp = escale_to[rol]+"_"+lsUserRol[0]
-                    else:
-                        next_grp = escale_to[rol]
-                    data_user = (user, rol, ','.join(lsUserRol), ','.join(groups_to_share),next_grp)
+
+                    data_user = (user, rol, ','.join(lsUserRol), ','.join(groups_to_share),escale_to[rol])
                     do_insert_simidb(add_user,data_user)
     else:
         print "Falta parametro archivo de usuarios y de configuracion"
