@@ -1,4 +1,3 @@
-numpy
 aniso8601==1.2.0
 appdirs==1.4.3
 certifi==2017.4.17
