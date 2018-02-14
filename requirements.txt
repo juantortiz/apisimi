@@ -15,7 +15,6 @@ Jinja2==2.9.5
 MarkupSafe==1.0
 mysql-connector-python-rf==2.2.2
 MySQL-python==1.2.5
-openpyxl==2.4.8
 packaging==16.8
 PyMySQL==0.7.10
 pyparsing==2.2.0
