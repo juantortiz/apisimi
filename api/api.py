@@ -15,8 +15,6 @@ import requests
 from requests.auth import HTTPBasicAuth
 
 
-
-
 app = Flask(__name__)
 api = Api(app)
 CORS(app)
@@ -378,25 +376,39 @@ class ListaSimisPorCuit(Resource):
             con_simidb.close()
 
 
-class ListaSimis(Resource):
+class UserInfo(Resource):
 
     def __init__(self):
-        self.grpMap = {}
-        analistas = ['Varios1','Varios2','Varios4','Textil','Automotriz']
-        aprobadores = ['aprobador_Varios1','aprobador_Varios2','aprobador_Varios3','aprobador_Varios4','aprobador_Textil','aprobador_Automotriz']
-        for grp in analistas:
-            grupos = analistas[:]
-            grupos.pop(grupos.index(grp))
-            self.grpMap[grp] = grupos
-            # //self.grpMap[grp].append('aprobador_'+grp)
-        for grp in aprobadores:
-            grupos = aprobadores[:]
-            grupos.pop(grupos.index(grp))
-            self.grpMap[grp] = grupos
-            # self.grpMap[grp].append('supervisor')
-        self.grpMap['supervisor'] = ['director_importacion']
-        self.grpMap['director_importacion'] = ['director_nacional']
-        self.grpMap['director_nacional'] = []
+        self.usuario = ''
+
+    def get_rol(self):
+        dbsimi = mysql.connect()
+        cursorSimiUser = dbsimi.cursor()
+        queryUser = "SELECT * FROM user_rol WHERE user=%s"
+        cursorSimiUser.execute(queryUser, self.usuario)
+        simiUser = cursorSimiUser.fetchone()
+        rol = simiUser[1]
+        to_share = (simiUser[3]).split(',')
+        to_scale = simiUser[4]
+
+        userData = {
+            "rol": rol,
+            "to_scale": to_scale,
+            "to_share": to_share
+        }
+
+        return userData
+
+    def get(self):
+        parser2 = reqparse.RequestParser()
+        parser2.add_argument('usuario', type=unicode, required=True)
+        rargs = parser2.parse_args()
+        self.usuario = rargs['usuario']
+
+        return self.get_rol()
+
+
+class ListaSimis(Resource):
 
     def get(self):
 
@@ -482,12 +494,7 @@ class ListaSimis(Resource):
 
                 for index3 in range(len(data3)):
                     if data1[index1][0] == data3[index3][0]: # Verifica que tenga el PInstanceId
-                        if data3[index3][1] == 'grp':
-                            groups = self.grpMap[data3[index3][2]] # Depende el grupo, se fija a quienes puede escalar.
-                            eleJson['escale_to'] = groups
-                            eleJson[data3[index3][1]] = data3[index3][2]
-                        else:
-                            eleJson[data3[index3][1]] = data3[index3][2]
+                       eleJson[data3[index3][1]] = data3[index3][2]
                     else:
                         continue
 
@@ -560,7 +567,6 @@ class ListaSimis(Resource):
                 eleJson["listSimiDetails"] = detailList
 
                 dataJson2.append(eleJson)
-            # print dataJson2
             return dataJson2
 
         except Exception as e:
@@ -725,6 +731,7 @@ api.add_resource(ImportadorPaOcho, '/ImportadorPaOcho')
 api.add_resource(ImportadorPaDoce, '/ImportadorPaDoce')
 api.add_resource(ImportadorRobot, '/ImportadorRobot')
 api.add_resource(ListaSimisPorCuit, '/ListaSimisPorCuit')
+api.add_resource(UserInfo, '/UserInfo')
 
 
 if len(sys.argv) == 2:
