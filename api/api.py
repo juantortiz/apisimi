@@ -55,7 +55,7 @@ def init_config(configFile):
 class ImportadorRobot(Resource):
 
     def get(self):
-        con_simidb = mysql.connect()
+        con_simidb = None
 
         try:
             parser = reqparse.RequestParser()
@@ -101,13 +101,14 @@ class ImportadorRobot(Resource):
             return {'error': str(e)}
 
         finally:
-            con_simidb.close()
+            if con_simidb:
+                con_simidb.close()
 
 
 class ImportadorPaOcho(Resource):
 
     def get(self):
-        con_simidb = mysql.connect()
+        con_simidb = None
 
         try:
             parser = reqparse.RequestParser()
@@ -150,13 +151,14 @@ class ImportadorPaOcho(Resource):
             return {'error': str(e)}
 
         finally:
-            con_simidb.close()
+            if con_simidb:
+                con_simidb.close()
 
 
 class ImportadorPaDoce(Resource):
 
     def get(self):
-        con_simidb = mysql.connect()
+        con_simidb = None
 
         try:
             parser = reqparse.RequestParser()
@@ -199,12 +201,14 @@ class ImportadorPaDoce(Resource):
             return {'error': str(e)}
 
         finally:
-            con_simidb.close()
+            if con_simidb:
+                con_simidb.close()
 
 
 class Importador(Resource):
     def get(self):
 
+        conn = None
         try:
             conn = mysql.connect()
             parser = reqparse.RequestParser()
@@ -258,15 +262,17 @@ class Importador(Resource):
         except Exception as e:
             return {'error': str(e)}
         finally:
-            conn.close()
+            if conn:
+                conn.close()
 
 
 class ListaSimisPorCuit(Resource):
 
     def get(self):
-        con_simidb = mysql.connect()
+        con_simidb = None
 
         try:
+            con_simidb = mysql.connect()
             parser = reqparse.RequestParser()
             parser.add_argument('cuit', type=unicode, required=True)
             rargs = parser.parse_args()
@@ -300,10 +306,10 @@ class ListaSimisPorCuit(Resource):
                               "     (CASE WHEN (re.CUIT_CUIL IS NOT NULL) THEN 'S' ELSE 'N' END) AS tiene_acuerdo_automatico,"\
                               "     (CASE WHEN (ap.cuit IS NOT NULL) THEN 'S' ELSE 'N' END) AS tiene_rump"\
                               " FROM djais_hist AS dj"\
-	                          "    JOIN Importadores AS imp ON (dj.cuit_importador = imp.id_persona)"\
-	                          "    LEFT JOIN acuerdo_anexos as ac ON (dj.destinacion = ac.djai)"\
-	                          "    LEFT JOIN (select ap.cuit from acuerdo_pa as ap group by ap.cuit) ap ON (dj.cuit_importador = ap.cuit)"\
-	                          "    LEFT JOIN (select re.CUIT_CUIL from rump_cuits as re group by re.CUIT_CUIL) re ON (dj.cuit_importador = re.CUIT_CUIL)"\
+                                  "    JOIN Importadores AS imp ON (dj.cuit_importador = imp.id_persona)"\
+                                  "    LEFT JOIN acuerdo_anexos as ac ON (dj.destinacion = ac.djai)"\
+                                  "    LEFT JOIN (select ap.cuit from acuerdo_pa as ap group by ap.cuit) ap ON (dj.cuit_importador = ap.cuit)"\
+                                  "    LEFT JOIN (select re.CUIT_CUIL from rump_cuits as re group by re.CUIT_CUIL) re ON (dj.cuit_importador = re.CUIT_CUIL)"\
                               " WHERE dj.cuit_importador = %s";
 
             cursor_historico.execute(query_historico, cuit_arg)
@@ -323,27 +329,27 @@ class ListaSimisPorCuit(Resource):
                 cursorSimi_Detail = con_simidb.cursor()
                 query_DetailView ="SELECT a1.destinacion AS destinacion,"\
                                 "         a1.estado_gestion AS estado_gestion,"\
-                                "	 	  a1.numero_item AS numero_item,"\
-                                "		  a1.numero_subitem AS numero_subitem,"\
-                                "	      a1.descripcion_mercaderia AS descripcion_mercaderia,"\
-                                "	      a1.posicion_arancelaria AS posicion_arancelaria,"\
-                                "	      pr.codigo_posicion_arancelaria AS codigo_posicion_arancelaria,"\
-                                "	      a1.fob_dolares AS fob_dolares,"\
-                                "	      a1.fob_dolares_subitem AS fob_dolares_subitem,"\
-                                "	      a1.cantidad_unidades_declarada AS cantidad_unidades_declarada,"\
-                                "	      a1.pais_procedencia AS pais_procedencia,"\
-                                "	      a1.pais_origen AS pais_origen,"\
-                                "	      a1.descripcion_moneda_fob AS descripcion_moneda_fob,"\
-                                "	      a1.fecha_embarque_item AS fecha_embarque_item,"\
-                                "	      a1.fecha_arribo_item AS fecha_arribo_item,"\
-                                "	      a1.fecha_ultima_modificacion AS fecha_ultima_modificacion,"\
-                                "	      a1.marca_subitem AS marca_subitem,"\
-                                "	      a1.modelo_subitem AS modelo_subitem,"\
-                                "	      a1.descripcion_unidad_medida AS descripcion_unidad_medida,"\
-                                "	      a1.unidad_estadistica AS unidad_estadistica,"\
-                                "	      a1.peso_neto_kg AS peso_neto_kg,"\
-                                "	      a1.precio_unitario_subitem AS precio_unitario_subitem,"\
-                                "	      a1.lna AS lna"\
+                                "                 a1.numero_item AS numero_item,"\
+                                "                 a1.numero_subitem AS numero_subitem,"\
+                                "             a1.descripcion_mercaderia AS descripcion_mercaderia,"\
+                                "             a1.posicion_arancelaria AS posicion_arancelaria,"\
+                                "             pr.codigo_posicion_arancelaria AS codigo_posicion_arancelaria,"\
+                                "             a1.fob_dolares AS fob_dolares,"\
+                                "             a1.fob_dolares_subitem AS fob_dolares_subitem,"\
+                                "             a1.cantidad_unidades_declarada AS cantidad_unidades_declarada,"\
+                                "             a1.pais_procedencia AS pais_procedencia,"\
+                                "             a1.pais_origen AS pais_origen,"\
+                                "             a1.descripcion_moneda_fob AS descripcion_moneda_fob,"\
+                                "             a1.fecha_embarque_item AS fecha_embarque_item,"\
+                                "             a1.fecha_arribo_item AS fecha_arribo_item,"\
+                                "             a1.fecha_ultima_modificacion AS fecha_ultima_modificacion,"\
+                                "             a1.marca_subitem AS marca_subitem,"\
+                                "             a1.modelo_subitem AS modelo_subitem,"\
+                                "             a1.descripcion_unidad_medida AS descripcion_unidad_medida,"\
+                                "             a1.unidad_estadistica AS unidad_estadistica,"\
+                                "             a1.peso_neto_kg AS peso_neto_kg,"\
+                                "             a1.precio_unitario_subitem AS precio_unitario_subitem,"\
+                                "             a1.lna AS lna"\
                                 " FROM a1dest_hist a1"\
                                 "      LEFT JOIN posiciones_res pr ON a1.posicion_arancelaria = CONVERT(pr.codigo_posicion_arancelaria USING utf8)"\
                                 "      JOIN djais_hist dj ON dj.destinacion = a1.destinacion"\
@@ -373,7 +379,8 @@ class ListaSimisPorCuit(Resource):
             return {'error': str(e)}
 
         finally:
-            con_simidb.close()
+            if con_simidb:
+                con_simidb.close()
 
 
 class UserInfo(Resource):
@@ -505,7 +512,7 @@ class ListaSimis(Resource):
                                         "destinacion                          "\
                                         ",estado                              "\
                                         ",fecha_ofic                          "\
-                                        ",fecha_caducidad					  "\
+                                        ",fecha_caducidad                     "\
                                         ",fecha_envio_afip                    "\
                                         ",fecha_envio_afip_motivo_observacion "\
                                         ",fob_dolares_disponible              "\
@@ -658,7 +665,6 @@ class Query(Resource):
         return fieldsToFind[keyArg](valueArg)
 
     def listaIdSimis(self, rargs):
-        #DB SIMI
         dbSimi = mysql.connect()
         cursor = dbSimi.cursor()
         regs = ''
